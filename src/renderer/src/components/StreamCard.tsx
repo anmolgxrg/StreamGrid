@@ -81,7 +81,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
         overflow: 'hidden'
       }}
     >
-      <Box sx={{ position: 'relative', height: '40px', bgcolor: 'rgba(0,0,0,0.8)' }}>
+      <Box sx={{ position: 'relative', minHeight: '40px', height: '40px', flexShrink: 0, bgcolor: 'rgba(0,0,0,0.8)' }}>
         <Box
           className="drag-handle"
           sx={{

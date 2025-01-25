@@ -91,8 +91,9 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
         draggableHandle=".drag-handle"
         isResizable
         compactType={null}
-        preventCollision
-        maxRows={12}
+        preventCollision={true}
+        allowOverlap={true}
+        maxRows={Infinity}
       >
         {streams.map((stream) => (
           <div key={stream.id}>

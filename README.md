@@ -2,15 +2,23 @@
 
 <div align="center">
   <img src="src/renderer/src/assets/StreamGrid.svg" alt="StreamGrid Logo" width="200"/>
-  <h3>A Modern Stream Management Desktop Application</h3>
+  <h3>Your Streams, Your Layout, Your Way</h3>
 </div>
 
-StreamGrid is an Electron-based desktop application built with React and TypeScript that allows users to manage and view multiple video streams simultaneously in a customizable grid layout. Perfect for monitoring multiple live streams, security cameras, or any video sources that support HLS streaming.
+StreamGrid revolutionizes multi-stream viewing by giving you complete freedom over your layout. Want a massive main stream surrounded by smaller feeds? Or five equally-sized streams? Or any other arrangement you can imagine? StreamGrid makes it possible. Built with Electron, React, and TypeScript, it's the perfect solution for watching multiple streams exactly the way you want.
 
 ## ✨ Features
 
-- **Customizable Grid Layout**: Drag-and-drop interface to arrange streams in a 12-column grid
-- **Resizable Stream Windows**: Adjust the size of individual stream windows to focus on important content
+- **Ultimate Layout Flexibility** (Our Core Feature):
+  - Create ANY layout you can imagine - from 2 streams to 5+ streams
+  - Make streams any size you want - go big with your main stream while keeping others visible
+  - Perfect for scenarios like:
+    * One large main stream surrounded by smaller secondary streams
+    * Equal-sized grid for monitoring multiple sources
+    * Custom arrangements for esports tournaments or multi-angle viewing
+- **Intuitive Controls**:
+  - Drag & Drop: Instantly reorganize your layout
+  - Resize Handles: Click and drag to adjust stream sizes in real-time
 - **Stream Management**:
   - Add new streams with custom names and logos
   - Remove streams with a single click
