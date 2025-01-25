@@ -13,7 +13,7 @@ asarUnpack:
   - resources/**
 win:
   executableName: streamgrid
-  icon: src/renderer/src/assets/icon.ico
+  icon: src/renderer/src/assets/logo.png
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
