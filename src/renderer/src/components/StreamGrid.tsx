@@ -27,8 +27,7 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
     const updateWidth = (): void => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth
-        const padding = 16 // Account for container padding
-        const newWidth = Math.floor(containerWidth - padding * 2)
+        const newWidth = Math.floor(containerWidth)
         setWidth(Math.max(newWidth, 480)) // Ensure minimum width
       }
     }
@@ -75,7 +74,6 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
         rowHeight={100}
         width={width}
         margin={[8, 8]}
-        containerPadding={[8, 8]}
         useCSSTransforms={true}
         onLayoutChange={(layout) => handleLayoutChange(layout as GridItem[])}
         isDraggable
