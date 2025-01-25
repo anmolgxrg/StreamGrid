@@ -82,6 +82,21 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
       }}
     >
       <Box sx={{ position: 'relative', minHeight: '40px', height: '40px', flexShrink: 0, bgcolor: 'rgba(0,0,0,0.8)' }}>
+        <Typography
+          variant="subtitle2"
+          noWrap
+          sx={{
+            color: 'white',
+            position: 'absolute',
+            left: 8,
+            right: 40,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            pointerEvents: 'none' // Make text non-interactive
+          }}
+        >
+          {stream.name}
+        </Typography>
         <Box
           className="drag-handle"
           sx={{
@@ -95,25 +110,9 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
             transition: 'background-color 0.2s',
             '&:hover': {
               backgroundColor: 'rgba(0,0,0,0.2)'
-            },
-            zIndex: 1
+            }
           }}
         />
-        <Typography
-          variant="subtitle2"
-          noWrap
-          sx={{
-            color: 'white',
-            position: 'absolute',
-            left: 8,
-            right: 40,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            zIndex: 1
-          }}
-        >
-          {stream.name}
-        </Typography>
       </Box>
       <IconButton
         onClick={(e) => {

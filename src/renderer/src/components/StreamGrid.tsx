@@ -63,7 +63,6 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
     onLayoutChange(newLayout)
   }
 
-
   return (
     <Box
       ref={containerRef}
@@ -74,7 +73,21 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
         overflow: 'hidden',
         position: 'relative',
         '& .react-grid-layout': {
-          height: '100% !important'
+          height: 'calc(100% - 15px) !important',
+          paddingBottom: '15px'
+        },
+        '& .react-resizable-handle': {
+          width: '20px',
+          height: '20px',
+          bottom: '-10px',
+          right: '-10px',
+          cursor: 'se-resize',
+          '&::after': {
+            width: '12px',
+            height: '12px',
+            right: '5px',
+            bottom: '5px'
+          }
         }
       }}
     >
