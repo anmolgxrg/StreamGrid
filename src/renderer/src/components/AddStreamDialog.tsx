@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -6,34 +6,43 @@ import {
   DialogActions,
   Button,
   TextField,
-  Stack
-} from '@mui/material';
-import { useForm, SubmitHandler } from 'react-hook-form';
-import { StreamFormData } from '../types/stream';
+  Stack,
+  Menu,
+  MenuItem,
+  IconButton
+} from '@mui/material'
+import { KeyboardArrowDown } from '@mui/icons-material'
+import { useForm, SubmitHandler } from 'react-hook-form'
+import { StreamFormData } from '../types/stream'
 
 interface AddStreamDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onAdd: (data: StreamFormData) => void;
+  open: boolean
+  onClose: () => void
+  onAdd: (data: StreamFormData) => void
+  onImport?: () => void
+  onExport?: () => void
 }
 
 export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
   open,
   onClose,
-  onAdd
+  onAdd,
+  onImport,
+  onExport
 }) => {
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null)
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset
-  } = useForm<StreamFormData>();
+  } = useForm<StreamFormData>()
 
   const onSubmit: SubmitHandler<StreamFormData> = (data): void => {
-    onAdd(data);
-    reset();
-    onClose();
-  };
+    onAdd(data)
+    reset()
+    onClose()
+  }
 
   return (
     <Dialog
@@ -48,7 +57,34 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
         }
       }}
     >
-      <DialogTitle sx={{ pb: 1 }}>Add New Stream</DialogTitle>
+      <DialogTitle sx={{ pb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+        Add New Stream
+        <IconButton
+          size="small"
+          onClick={(e) => setMenuAnchor(e.currentTarget)}
+          sx={{ ml: 'auto' }}
+        >
+          <KeyboardArrowDown />
+        </IconButton>
+        <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
+          <MenuItem
+            onClick={() => {
+              setMenuAnchor(null)
+              onImport?.()
+            }}
+          >
+            Import JSON
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              setMenuAnchor(null)
+              onExport?.()
+            }}
+          >
+            Export JSON
+          </MenuItem>
+        </Menu>
+      </DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
           <Stack spacing={2}>
@@ -120,5 +156,5 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
         </DialogActions>
       </form>
     </Dialog>
-  );
-};
+  )
+}

@@ -1,20 +1,26 @@
-import React, { useState } from 'react';
-import ReactPlayer from 'react-player';
-import { Card, CardContent, CardMedia, IconButton, Typography, Box } from '@mui/material';
-import { PlayArrow, Stop, Close } from '@mui/icons-material';
-import { Stream } from '../types/stream';
+import React, { useState } from 'react'
+import ReactPlayer from 'react-player'
+import { Card, CardContent, CardMedia, IconButton, Typography, Box } from '@mui/material'
+import { PlayArrow, Stop, Close, OpenWith, DragHandle } from '@mui/icons-material'
+import { Stream } from '../types/stream'
 
 interface StreamCardProps {
-  stream: Stream;
-  onRemove: (id: string) => void;
+  stream: Stream
+  onRemove: (id: string) => void
 }
 
 export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleTogglePlay = (): void => {
-    setIsPlaying(!isPlaying);
-  };
+  const handlePlay = (): void => {
+    setError(null)
+    setIsPlaying(true)
+  }
+
+  const handleStop = (): void => {
+    setIsPlaying(false)
+  }
 
   return (
     <Card
@@ -26,11 +32,67 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
         position: 'relative',
         bgcolor: 'background.paper',
         borderRadius: 2,
-        overflow: 'hidden'
+        overflow: 'hidden',
+        cursor: 'default'
       }}
     >
+      <Box
+        className="resize-handle"
+        sx={{
+          position: 'absolute',
+          right: 0,
+          bottom: 0,
+          width: 24,
+          height: 24,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          color: 'white',
+          opacity: 0,
+          transition: 'opacity 0.2s',
+          cursor: 'se-resize',
+          zIndex: 2,
+          '&:hover': {
+            opacity: 1
+          }
+        }}
+      >
+        <OpenWith sx={{ fontSize: 16, transform: 'rotate(45deg)' }} />
+      </Box>
+      <Box
+        className="drag-handle"
+        sx={{
+          position: 'absolute',
+          left: 8,
+          top: 8,
+          width: 24,
+          height: 24,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          color: 'white',
+          opacity: 0.6,
+          transition: 'opacity 0.2s',
+          cursor: 'grab',
+          zIndex: 2,
+          '&:hover': {
+            opacity: 1
+          },
+          '&:active': {
+            cursor: 'grabbing'
+          }
+        }}
+      >
+        <DragHandle fontSize="small" />
+      </Box>
+
       <IconButton
-        onClick={() => onRemove(stream.id)}
+        onClick={(e) => {
+          e.stopPropagation()
+          onRemove(stream.id)
+        }}
         sx={{
           position: 'absolute',
           right: 8,
@@ -63,7 +125,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
               cursor: 'pointer',
               minHeight: 0
             }}
-            onClick={handleTogglePlay}
+            onClick={handlePlay}
           />
           <CardContent
             sx={{
@@ -79,7 +141,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5 }}>
               <IconButton
                 size="small"
-                onClick={handleTogglePlay}
+                onClick={handlePlay}
                 sx={{
                   color: 'white',
                   '&:hover': { color: 'primary.main' }
@@ -99,26 +161,54 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
             playing={isPlaying}
             controls
             style={{ backgroundColor: '#000' }}
-          />
-          <IconButton
-            onClick={handleTogglePlay}
-            sx={{
-              position: 'absolute',
-              left: 8,
-              top: 8,
-              backgroundColor: 'rgba(0,0,0,0.6)',
-              color: 'white',
-              '&:hover': {
-                backgroundColor: 'rgba(0,0,0,0.8)',
-                color: 'primary.main'
-              }
+            onError={(e) => {
+              console.error('Stream error:', e)
+              setError('Stream is not accessible')
+              setIsPlaying(false)
             }}
-            size="small"
-          >
-            <Stop />
-          </IconButton>
+          />
+          {error ? (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(0,0,0,0.7)',
+                color: 'error.main',
+                padding: 2,
+                textAlign: 'center'
+              }}
+            >
+              <Typography variant="body1" color="error">
+                {error}
+              </Typography>
+            </Box>
+          ) : (
+            <IconButton
+              onClick={handleStop}
+              sx={{
+                position: 'absolute',
+                left: 8,
+                top: 8,
+                backgroundColor: 'rgba(0,0,0,0.6)',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(0,0,0,0.8)',
+                  color: 'primary.main'
+                }
+              }}
+              size="small"
+            >
+              <Stop />
+            </IconButton>
+          )}
         </Box>
       )}
     </Card>
-  );
-};
+  )
+}
