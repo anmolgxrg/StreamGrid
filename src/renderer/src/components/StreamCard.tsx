@@ -50,6 +50,23 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
         overflow: 'hidden'
       }}
     >
+      <Box
+        className="drag-handle"
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '20px',
+          cursor: 'move',
+          backgroundColor: 'rgba(0,0,0,0.0)',
+          transition: 'background-color 0.2s',
+          '&:hover': {
+            backgroundColor: 'rgba(0,0,0,0.2)'
+          },
+          zIndex: 1
+        }}
+      />
       <IconButton
         onClick={(e) => {
           e.stopPropagation()
