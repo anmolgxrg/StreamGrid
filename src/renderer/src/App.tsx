@@ -69,8 +69,8 @@ export const App: React.FC = () => {
             <Box
               onClick={(e) => setAboutAnchorEl(e.currentTarget)}
               sx={{
-                width: '38px',
-                height: '38px',
+                width: '32px',
+                height: '32px',
                 display: 'flex',
                 alignItems: 'center',
                 cursor: 'pointer',

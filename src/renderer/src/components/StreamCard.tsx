@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react'
 import ReactPlayer from 'react-player'
-import { Card, CardContent, CardMedia, IconButton, Typography, Box } from '@mui/material'
+import { Card, CardMedia, IconButton, Typography, Box } from '@mui/material'
 import { PlayArrow, Stop, Close } from '@mui/icons-material'
 import { Stream } from '../types/stream'
 
@@ -81,23 +81,40 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
         overflow: 'hidden'
       }}
     >
-      <Box
-        className="drag-handle"
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '24px',
-          cursor: 'move',
-          backgroundColor: 'rgba(0,0,0,0.0)',
-          transition: 'background-color 0.2s',
-          '&:hover': {
-            backgroundColor: 'rgba(0,0,0,0.2)'
-          },
-          zIndex: 1
-        }}
-      />
+      <Box sx={{ position: 'relative', height: '40px', bgcolor: 'rgba(0,0,0,0.8)' }}>
+        <Box
+          className="drag-handle"
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '100%',
+            cursor: 'move',
+            backgroundColor: 'rgba(0,0,0,0.0)',
+            transition: 'background-color 0.2s',
+            '&:hover': {
+              backgroundColor: 'rgba(0,0,0,0.2)'
+            },
+            zIndex: 1
+          }}
+        />
+        <Typography
+          variant="subtitle2"
+          noWrap
+          sx={{
+            color: 'white',
+            position: 'absolute',
+            left: 8,
+            right: 40,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 1
+          }}
+        >
+          {stream.name}
+        </Typography>
+      </Box>
       <IconButton
         onClick={(e) => {
           e.stopPropagation()
@@ -123,48 +140,47 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
       </IconButton>
 
       {!isPlaying ? (
-        <Box sx={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
+        <Box
+          sx={{
+            height: 'calc(100% - 40px)',
+            cursor: 'pointer',
+            '&:hover': {
+              '& .play-overlay': {
+                opacity: 1
+              }
+            }
+          }}
+          onClick={handlePlay}
+        >
           <CardMedia
             component="img"
             image={stream.logoUrl}
             alt={stream.name}
             sx={{
-              flex: 1,
+              width: '100%',
+              height: '100%',
               objectFit: 'contain',
-              backgroundColor: '#000',
-              cursor: 'pointer',
-              minHeight: 0
+              backgroundColor: '#000'
             }}
-            onClick={handlePlay}
           />
-          <CardContent
+          <Box
+            className="play-overlay"
             sx={{
-              p: 1,
-              '&:last-child': { pb: 1 },
-              backgroundColor: 'rgba(0,0,0,0.8)',
-              color: 'white'
+              position: 'absolute',
+              top: 40,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(0,0,0,0.3)',
+              opacity: 0,
+              transition: 'opacity 0.2s'
             }}
           >
-            <Typography variant="subtitle2" noWrap align="center">
-              {stream.name}
-            </Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5 }}>
-              <IconButton
-                size="small"
-                onClick={handlePlay}
-                sx={{
-                  color: 'white',
-                  '&:hover': { color: 'primary.main' }
-                }}
-              >
-                <PlayArrow />
-              </IconButton>
-            </Box>
-          </CardContent>
+            <PlayArrow sx={{ fontSize: 48, color: 'white' }} />
+          </Box>
         </Box>
       ) : (
         <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
