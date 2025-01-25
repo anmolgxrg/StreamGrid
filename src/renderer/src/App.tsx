@@ -154,10 +154,7 @@ export const App: React.FC = () => {
                   About StreamGrid
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>
-                  Created by Bernard Moerdler
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Version 1.0.0
+                  Created by Bernard Moerdler {window.api.version}
                 </Typography>
                 <Link
                   href="https://github.com/LordKnish/StreamGrid"

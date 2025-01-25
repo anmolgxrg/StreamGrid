@@ -150,8 +150,11 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
+  // IPC handlers
   ipcMain.on('ping', () => console.log('pong'))
+  ipcMain.on('get-app-version', (event) => {
+    event.returnValue = app.getVersion()
+  })
 
   createWindow()
 
