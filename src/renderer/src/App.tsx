@@ -76,8 +76,7 @@ export const App: React.FC = () => {
                 cursor: 'pointer',
                 '& img': {
                   width: '100%',
-                  height: '100%',
-                  filter: (theme) => theme.palette.mode === 'dark' ? 'invert(1)' : 'none'
+                  height: '100%'
                 }
               }}
             >
