@@ -81,7 +81,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
         overflow: 'hidden'
       }}
     >
-      <Box sx={{ position: 'relative', minHeight: '40px', height: '40px', flexShrink: 0, bgcolor: 'rgba(0,0,0,0.8)' }}>
+      <Box sx={{ position: 'relative', height: '40px', flexShrink: 0, bgcolor: 'rgba(0,0,0,0.8)' }}>
         <Typography
           variant="subtitle2"
           noWrap
@@ -186,18 +186,16 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
         <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
           <Box
             sx={{
-              width: '100%',
-              height: 'calc(100% - 40px)',
+              position: 'absolute',
+              top: '0px',
+              left: 0,
+              right: 0,
+              bottom: 0,
               backgroundColor: '#000',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              overflow: 'hidden',
-              position: 'absolute',
-              top: 40,
-              left: 0,
-              right: 0,
-              bottom: 0
+              overflow: 'hidden'
             }}
             onMouseDown={(e) => e.stopPropagation()}
           >
