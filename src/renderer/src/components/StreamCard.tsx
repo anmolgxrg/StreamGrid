@@ -131,7 +131,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
           },
           width: 24,
           height: 24,
-          padding: '4px'
+          padding: '0px'
         }}
         size="small"
       >

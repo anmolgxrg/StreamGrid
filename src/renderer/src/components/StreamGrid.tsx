@@ -26,6 +26,29 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
   const [dimensions, setDimensions] = useState({ width: 1200, rowHeight: 100 })
   const resizeTimeoutRef = useRef<number>()
   const ASPECT_RATIO = 16 / 9 // Standard video aspect ratio
+  const calculateMargins = (): {
+    horizontal: number;
+    vertical: number;
+    edgeHorizontal: number;
+    edgeVertical: number;
+  } => {
+    // Base margins on viewport width for consistent proportions
+    const viewportWidth = window.innerWidth
+    // Smaller margins between cards
+    const horizontalMargin = Math.max(Math.floor(viewportWidth * 0.004), 2) // 0.4% of viewport width, minimum 2px
+    const verticalMargin = Math.max(Math.floor(viewportWidth * 0.003), 2) // 0.3% of viewport width, minimum 2px
+
+    // Larger margins for viewport edges (7.5 * card margins)
+    const edgeHorizontal = horizontalMargin * 7.5
+    const edgeVertical = verticalMargin * 5
+
+    return {
+      horizontal: horizontalMargin,
+      vertical: verticalMargin,
+      edgeHorizontal,
+      edgeVertical
+    }
+  }
 
   useEffect((): (() => void) => {
     const updateDimensions = (): void => {
@@ -36,8 +59,9 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
         // Calculate row height to maintain aspect ratio
         // Calculate available height and width
         const containerHeight = window.innerHeight
-        const horizontalMargins = 11 * 8 // 11 gaps between 12 columns, 8px margin each
-        const verticalMargins = 11 * 4 // Maximum 12 rows, 8px margin each
+        const margins = calculateMargins()
+        const horizontalMargins = margins.edgeHorizontal // Use edge margins for viewport edges
+        const verticalMargins = margins.edgeVertical // Use edge margins for viewport edges
         const availableWidth = newWidth - horizontalMargins
         const availableHeight = containerHeight - verticalMargins
 
@@ -104,7 +128,7 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
         cols={12}
         width={dimensions.width}
         rowHeight={dimensions.rowHeight}
-        margin={[8, 8]}
+        margin={[calculateMargins().horizontal, calculateMargins().vertical]} // Use smaller margins between cards
         useCSSTransforms={true}
         onLayoutChange={(layout) => handleLayoutChange(layout as GridItem[])}
         isDraggable
