@@ -57,7 +57,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
           top: 0,
           left: 0,
           right: 0,
-          height: '20px',
+          height: '24px',
           cursor: 'move',
           backgroundColor: 'rgba(0,0,0,0.0)',
           transition: 'background-color 0.2s',
@@ -92,7 +92,11 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
       </IconButton>
 
       {!isPlaying ? (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
           <CardMedia
             component="img"
             image={stream.logoUrl}
@@ -137,7 +141,11 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
             sx={{
               width: '100%',
               height: '100%',
-              backgroundColor: '#000'
+              backgroundColor: '#000',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden'
             }}
             onMouseDown={(e) => e.stopPropagation()}
           >

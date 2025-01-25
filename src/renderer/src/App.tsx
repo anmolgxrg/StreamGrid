@@ -116,7 +116,7 @@ export const App: React.FC = () => {
         </Toolbar>
       </AppBar>
 
-      <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+      <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
         <StreamGrid
           streams={streams}
           layout={layout}
