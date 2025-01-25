@@ -1,7 +1,62 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.svg?asset'
+
+// Configure autoUpdater
+autoUpdater.autoDownload = false
+autoUpdater.autoInstallOnAppQuit = true
+
+function checkForUpdates(): void {
+  autoUpdater.checkForUpdates()
+}
+
+// Auto updater events
+autoUpdater.on('checking-for-update', () => {
+  console.log('Checking for updates...')
+})
+
+autoUpdater.on('update-available', (info) => {
+  dialog
+    .showMessageBox({
+      type: 'info',
+      title: 'Update Available',
+      message: `Version ${info.version} is available. Would you like to download it?`,
+      buttons: ['Yes', 'No'],
+      defaultId: 0
+    })
+    .then((result) => {
+      if (result.response === 0) {
+        autoUpdater.downloadUpdate()
+      }
+    })
+})
+
+autoUpdater.on('update-not-available', () => {
+  console.log('No updates available')
+})
+
+autoUpdater.on('error', (err) => {
+  console.error('Error in auto-updater:', err)
+})
+
+autoUpdater.on('download-progress', (progressObj) => {
+  console.log(`Download progress: ${progressObj.percent}%`)
+})
+
+autoUpdater.on('update-downloaded', (info) => {
+  dialog
+    .showMessageBox({
+      type: 'info',
+      title: 'Update Ready',
+      message: `Version ${info.version} has been downloaded. The application will now restart to install the update.`,
+      buttons: ['Restart']
+    })
+    .then(() => {
+      autoUpdater.quitAndInstall(false, true)
+    })
+})
 
 function createWindow(): void {
   // Create the browser window.
@@ -78,6 +133,13 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // Check for updates on app start
+  if (!is.dev) {
+    checkForUpdates()
+    // Check for updates every hour
+    setInterval(checkForUpdates, 60 * 60 * 1000)
+  }
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.streamgrid.app')
 

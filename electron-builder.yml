@@ -31,7 +31,10 @@ dmg:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
 publish:
-  provider: generic
-  url: https://example.com/auto-updates
+  provider: github
+  owner: bernie-m
+  repo: streamgrid
+  private: false
+  releaseType: release
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
