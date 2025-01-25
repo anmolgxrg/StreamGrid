@@ -1,4 +1,7 @@
+/* eslint-disable prettier/prettier */
+// eslint-disable-next-line prettier/prettier
 import React, { useEffect, useState, useRef } from 'react'
+// eslint-disable-next-line prettier/prettier
 import GridLayout from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
@@ -23,7 +26,7 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
   const [width, setWidth] = useState(1200)
   const resizeTimeoutRef = useRef<number>()
 
-  useEffect(() => {
+  useEffect((): (() => void) => {
     const updateWidth = (): void => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth
@@ -41,7 +44,7 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
 
     updateWidth()
     window.addEventListener('resize', debouncedUpdateWidth)
-    return () => {
+    return (): void => {
       window.removeEventListener('resize', debouncedUpdateWidth)
       if (resizeTimeoutRef.current) {
         window.clearTimeout(resizeTimeoutRef.current)

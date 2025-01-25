@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import React, { useState, useEffect } from 'react'
 import ReactPlayer from 'react-player'
 import {
@@ -19,11 +20,7 @@ interface AddStreamDialogProps {
   onAdd: (data: StreamFormData) => void
 }
 
-export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
-  open,
-  onClose,
-  onAdd
-}) => {
+export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose, onAdd }) => {
   const [logoPreview, setLogoPreview] = useState<string>('')
   const [streamPreview, setStreamPreview] = useState<string>('')
   const {
@@ -150,7 +147,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
                   config={{
                     file: {
                       attributes: {
-                        crossOrigin: "anonymous"
+                        crossOrigin: 'anonymous'
                       }
                     }
                   }}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Box, AppBar, Toolbar, Typography, Button, ButtonGroup, Menu, MenuItem } from '@mui/material'
 import { Add, KeyboardArrowDown } from '@mui/icons-material'
+import StreamGridLogo from './assets/StreamGrid.svg'
 import { v4 as uuidv4 } from 'uuid'
 import { StreamGrid } from './components/StreamGrid'
 import { AddStreamDialog } from './components/AddStreamDialog'
@@ -63,17 +64,33 @@ export const App: React.FC = () => {
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <AppBar position="static" elevation={0}>
         <Toolbar sx={{ backgroundColor: 'background.paper' }}>
-          <Typography
-            variant="h6"
-            component="div"
-            sx={{
-              flexGrow: 1,
-              color: 'text.primary',
-              fontWeight: 600
-            }}
-          >
-            StreamGrid
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
+            <Box
+              sx={{
+                width: '38px',
+                height: '38px',
+                display: 'flex',
+                alignItems: 'center',
+                '& img': {
+                  width: '100%',
+                  height: '100%',
+                  filter: (theme) => theme.palette.mode === 'dark' ? 'invert(1)' : 'none'
+                }
+              }}
+            >
+              <img src={StreamGridLogo} alt="StreamGrid Logo" />
+            </Box>
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{
+                color: 'text.primary',
+                fontWeight: 600
+              }}
+            >
+              StreamGrid
+            </Typography>
+          </Box>
           <ButtonGroup variant="contained" sx={{ borderRadius: 1 }}>
             <Button
               startIcon={<Add />}
