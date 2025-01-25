@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { Box, AppBar, Toolbar, Typography, Button, ButtonGroup, Menu, MenuItem } from '@mui/material'
-import { Add, KeyboardArrowDown } from '@mui/icons-material'
+import { Box, AppBar, Toolbar, Typography, Button, ButtonGroup, Menu, MenuItem, Link } from '@mui/material'
+import { Add, KeyboardArrowDown, GitHub } from '@mui/icons-material'
 import StreamGridLogo from './assets/StreamGrid.svg'
 import { v4 as uuidv4 } from 'uuid'
 import { StreamGrid } from './components/StreamGrid'
@@ -11,6 +11,7 @@ import { Stream, StreamFormData } from './types/stream'
 export const App: React.FC = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
+  const [aboutAnchorEl, setAboutAnchorEl] = useState<null | HTMLElement>(null)
   const { streams, layout, addStream, removeStream, updateLayout, importStreams } = useStreamStore()
 
   const handleAddStream = (data: StreamFormData): void => {
@@ -66,11 +67,13 @@ export const App: React.FC = () => {
         <Toolbar sx={{ backgroundColor: 'background.paper' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
             <Box
+              onClick={(e) => setAboutAnchorEl(e.currentTarget)}
               sx={{
                 width: '38px',
                 height: '38px',
                 display: 'flex',
                 alignItems: 'center',
+                cursor: 'pointer',
                 '& img': {
                   width: '100%',
                   height: '100%',
@@ -83,9 +86,11 @@ export const App: React.FC = () => {
             <Typography
               variant="h6"
               component="div"
+              onClick={(e) => setAboutAnchorEl(e.currentTarget)}
               sx={{
                 color: 'text.primary',
-                fontWeight: 600
+                fontWeight: 600,
+                cursor: 'pointer'
               }}
             >
               StreamGrid
@@ -129,6 +134,50 @@ export const App: React.FC = () => {
           >
             <MenuItem onClick={handleImport}>Import JSON</MenuItem>
             <MenuItem onClick={handleExport}>Export JSON</MenuItem>
+          </Menu>
+
+          <Menu
+            anchorEl={aboutAnchorEl}
+            open={Boolean(aboutAnchorEl)}
+            onClose={() => setAboutAnchorEl(null)}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'left'
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'left'
+            }}
+          >
+            <MenuItem>
+              <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 200 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                  About StreamGrid
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  Created by Bernard Moerdler
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Version 1.0.0
+                </Typography>
+                <Link
+                  href="https://github.com/LordKnish/StreamGrid"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    mt: 2,
+                    color: 'primary.main',
+                    textDecoration: 'none'
+                  }}
+                >
+                  <GitHub fontSize="small" />
+                  Visit GitHub
+                </Link>
+              </Box>
+            </MenuItem>
           </Menu>
         </Toolbar>
       </AppBar>
