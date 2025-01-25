@@ -13,7 +13,46 @@ function createWindow(): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      devTools: true,
+      webSecurity: false // Required for loading external media
+    }
+  })
+
+  // Set Content Security Policy
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob: mediastream:;",
+          "media-src 'self' https: blob: mediastream: *;",
+          "connect-src 'self' https: ws: wss: blob: mediastream: *;",
+          "img-src 'self' https: data: blob: *;",
+          "worker-src 'self' blob: *;"
+        ].join(' ')
+      }
+    })
+  })
+
+  // Add right-click menu for inspect element
+  mainWindow.webContents.on('context-menu', (_, props): void => {
+    const { x, y } = props
+    const menu = require('electron').Menu.buildFromTemplate([
+      {
+        label: 'Inspect Element',
+        click: (): void => {
+          mainWindow.webContents.inspectElement(x, y)
+        }
+      }
+    ])
+    menu.popup()
+  })
+
+  // Add keyboard shortcut for DevTools
+  mainWindow.webContents.on('before-input-event', (_, input): void => {
+    if (input.key === 'F12') {
+      mainWindow.webContents.toggleDevTools()
     }
   })
 

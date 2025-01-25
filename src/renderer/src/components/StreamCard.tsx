@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useCallback } from 'react'
 import ReactPlayer from 'react-player'
 import { Card, CardContent, CardMedia, IconButton, Typography, Box } from '@mui/material'
 import { PlayArrow, Stop, Close } from '@mui/icons-material'
@@ -11,18 +11,31 @@ interface StreamCardProps {
 
 export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
   const [isPlaying, setIsPlaying] = useState(false)
-  const playerRef = useRef<ReactPlayer>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handlePlay = (): void => {
+  const handlePlay = useCallback((): void => {
+    console.log('Attempting to play stream:', stream.streamUrl)
     setIsPlaying(true)
-  }
+    setIsLoading(true)
+  }, [stream.streamUrl])
 
-  const handleStop = (): void => {
-    if (playerRef.current) {
-      playerRef.current.seekTo(0)
-    }
+  const handleStop = useCallback((): void => {
     setIsPlaying(false)
-  }
+    setError(null)
+  }, [])
+
+  const handleReady = useCallback(() => {
+    console.log('Stream ready:', stream.streamUrl)
+    setIsLoading(false)
+    setError(null)
+  }, [stream.streamUrl])
+
+  const handleError = useCallback(() => {
+    console.error('Failed to load stream:', stream.streamUrl)
+    setError('Failed to load stream')
+    setIsLoading(false)
+  }, [stream.streamUrl])
 
   return (
     <Card
@@ -103,19 +116,88 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
         </Box>
       ) : (
         <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
-          <ReactPlayer
-            ref={playerRef}
-            url={stream.streamUrl}
-            width="100%"
-            height="100%"
-            playing={true}
-            controls={true}
-            onReady={() => {
-              if (playerRef.current) {
-                playerRef.current.seekTo(0)
-              }
+          <Box
+            sx={{
+              width: '100%',
+              height: '100%',
+              backgroundColor: '#000'
             }}
-          />
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <ReactPlayer
+              url={stream.streamUrl}
+              width="100%"
+              height="100%"
+              playing
+              controls
+              onReady={handleReady}
+              onError={handleError}
+              config={{
+                file: {
+                  attributes: {
+                    crossOrigin: 'anonymous'
+                  },
+                  forceHLS: true,
+                  hlsVersion: '1.4.12',
+                  hlsOptions: {
+                    enableWorker: false,
+                    lowLatencyMode: true,
+                    backBufferLength: 90,
+                    liveDurationInfinity: true,
+                    debug: false,
+                    xhrSetup: (xhr) => {
+                      xhr.withCredentials = false
+                    },
+                    manifestLoadingTimeOut: 10000,
+                    manifestLoadingMaxRetry: 3,
+                    levelLoadingTimeOut: 10000,
+                    levelLoadingMaxRetry: 3
+                  }
+                }
+              }}
+              playsinline
+              stopOnUnmount
+              pip={false}
+            />
+          </Box>
+          {(error || isLoading) && (
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(0,0,0,0.5)'
+              }}
+            >
+              {error ? (
+                <Typography sx={{ color: 'error.main', px: 2, py: 1, bgcolor: 'rgba(255,0,0,0.2)', borderRadius: 1 }}>
+                  {error}
+                </Typography>
+              ) : (
+                <Box
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    border: 4,
+                    borderColor: 'primary.main',
+                    borderTopColor: 'transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': {
+                      '0%': {
+                        transform: 'rotate(0deg)',
+                      },
+                      '100%': {
+                        transform: 'rotate(360deg)',
+                      },
+                    },
+                  }}
+                />
+              )}
+            </Box>
+          )}
           <IconButton
             onClick={handleStop}
             sx={{

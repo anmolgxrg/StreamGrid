@@ -15,6 +15,17 @@ export default defineConfig({
         '@renderer': resolve('src/renderer/src')
       }
     },
-    plugins: [react()]
+    plugins: [react()],
+    server: {
+      headers: {
+        'Content-Security-Policy': [
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob: mediastream:;",
+          "media-src 'self' https: blob: mediastream: *;",
+          "connect-src 'self' https: ws: wss: blob: mediastream: *;",
+          "img-src 'self' https: data: blob: *;",
+          "worker-src 'self' blob: *;"
+        ].join(' ')
+      }
+    }
   }
 })
