@@ -34,10 +34,18 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
         const newWidth = Math.max(Math.floor(containerWidth), 480) // Ensure minimum width
 
         // Calculate row height to maintain aspect ratio
-        const horizontalMargins = 11 * 4 // 11 gaps between 12 columns, 4px margin each
+        // Calculate available height and width
+        const containerHeight = window.innerHeight
+        const horizontalMargins = 11 * 8 // 11 gaps between 12 columns, 8px margin each
+        const verticalMargins = 11 * 4 // Maximum 12 rows, 8px margin each
         const availableWidth = newWidth - horizontalMargins
+        const availableHeight = containerHeight - verticalMargins
+
+        // Calculate row height that fits both width and height constraints
         const columnWidth = availableWidth / 12
-        const newRowHeight = Math.floor(columnWidth / ASPECT_RATIO)
+        const maxRowsByWidth = Math.floor(columnWidth / ASPECT_RATIO)
+        const maxRowsByHeight = Math.floor(availableHeight / 12)
+        const newRowHeight = Math.min(maxRowsByWidth, maxRowsByHeight)
         setDimensions({ width: newWidth, rowHeight: newRowHeight })
       }
     }
@@ -68,13 +76,12 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
       ref={containerRef}
       sx={{
         width: '100%',
-        height: '100%',
+        height: '100vh',
         backgroundColor: 'background.default',
         overflow: 'hidden',
         position: 'relative',
         '& .react-grid-layout': {
-          height: 'calc(100% - 15px) !important',
-          paddingBottom: '15px'
+          height: '100% !important'
         },
         '& .react-resizable-handle': {
           width: '20px',
@@ -97,7 +104,7 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
         cols={12}
         width={dimensions.width}
         rowHeight={dimensions.rowHeight}
-        margin={[4, 4]}
+        margin={[8, 8]}
         useCSSTransforms={true}
         onLayoutChange={(layout) => handleLayoutChange(layout as GridItem[])}
         isDraggable
@@ -106,7 +113,7 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
         compactType={null}
         preventCollision={true}
         allowOverlap={true}
-        maxRows={Infinity}
+        maxRows={12}
       >
         {streams.map((stream) => (
           <div key={stream.id}>

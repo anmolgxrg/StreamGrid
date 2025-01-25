@@ -141,7 +141,8 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
       {!isPlaying ? (
         <Box
           sx={{
-            height: 'calc(100% - 40px)',
+            flex: 1,
+            minHeight: 0,
             cursor: 'pointer',
             '&:hover': {
               '& .play-overlay': {
@@ -186,12 +187,17 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
           <Box
             sx={{
               width: '100%',
-              height: '100%',
+              height: 'calc(100% - 40px)',
               backgroundColor: '#000',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              position: 'absolute',
+              top: 40,
+              left: 0,
+              right: 0,
+              bottom: 0
             }}
             onMouseDown={(e) => e.stopPropagation()}
           >
