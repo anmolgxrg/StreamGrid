@@ -23,38 +23,48 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
   onLayoutChange
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [width, setWidth] = useState(1200)
+  const [dimensions, setDimensions] = useState({ width: 1200, rowHeight: 100 })
+  const aspectRatioRef = useRef(1200 / 100) // Store initial width/rowHeight ratio
   const resizeTimeoutRef = useRef<number>()
 
   useEffect((): (() => void) => {
-    const updateWidth = (): void => {
+    const updateDimensions = (): void => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth
-        const newWidth = Math.floor(containerWidth)
-        setWidth(Math.max(newWidth, 480)) // Ensure minimum width
+        const newWidth = Math.max(Math.floor(containerWidth), 480) // Ensure minimum width
+        // Maintain the same aspect ratio when resizing
+        const newRowHeight = Math.floor(newWidth / aspectRatioRef.current)
+        setDimensions({ width: newWidth, rowHeight: newRowHeight })
       }
     }
 
-    const debouncedUpdateWidth = (): void => {
+    const debouncedUpdateDimensions = (): void => {
       if (resizeTimeoutRef.current) {
         window.clearTimeout(resizeTimeoutRef.current)
       }
-      resizeTimeoutRef.current = window.setTimeout(updateWidth, 100)
+      resizeTimeoutRef.current = window.setTimeout(updateDimensions, 100)
     }
 
-    updateWidth()
-    window.addEventListener('resize', debouncedUpdateWidth)
+    updateDimensions()
+    window.addEventListener('resize', debouncedUpdateDimensions)
     return (): void => {
-      window.removeEventListener('resize', debouncedUpdateWidth)
+      window.removeEventListener('resize', debouncedUpdateDimensions)
       if (resizeTimeoutRef.current) {
         window.clearTimeout(resizeTimeoutRef.current)
       }
     }
   }, [])
 
+  // Update aspect ratio when layout changes
   const handleLayoutChange = (newLayout: GridItem[]): void => {
+    if (containerRef.current) {
+      const containerWidth = containerRef.current.offsetWidth
+      // Update the aspect ratio based on current dimensions
+      aspectRatioRef.current = containerWidth / dimensions.rowHeight
+    }
     onLayoutChange(newLayout)
   }
+
 
   return (
     <Box
@@ -74,8 +84,8 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
         className="layout"
         layout={layout}
         cols={12}
-        rowHeight={100}
-        width={width}
+        width={dimensions.width}
+        rowHeight={dimensions.rowHeight}
         margin={[8, 8]}
         useCSSTransforms={true}
         onLayoutChange={(layout) => handleLayoutChange(layout as GridItem[])}

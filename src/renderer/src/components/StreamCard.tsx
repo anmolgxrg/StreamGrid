@@ -184,8 +184,8 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
               url={stream.streamUrl}
               width="100%"
               height="100%"
-              playing
-              controls
+              playing={true}
+              controls={true}
               onReady={handleReady}
               onError={handleError}
               config={{
