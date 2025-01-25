@@ -11,10 +11,8 @@ interface StreamCardProps {
 
 export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
   const [isPlaying, setIsPlaying] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const handlePlay = (): void => {
-    setError(null)
     setIsPlaying(true)
   }
 
@@ -161,52 +159,31 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
             playing={isPlaying}
             controls
             style={{ backgroundColor: '#000' }}
-            onError={(e) => {
-              console.error('Stream error:', e)
-              setError('Stream is not accessible')
-              setIsPlaying(false)
+            config={{
+              file: {
+                attributes: {
+                  crossOrigin: "anonymous"
+                }
+              }
             }}
           />
-          {error ? (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: 'rgba(0,0,0,0.7)',
-                color: 'error.main',
-                padding: 2,
-                textAlign: 'center'
-              }}
-            >
-              <Typography variant="body1" color="error">
-                {error}
-              </Typography>
-            </Box>
-          ) : (
-            <IconButton
-              onClick={handleStop}
-              sx={{
-                position: 'absolute',
-                left: 8,
-                top: 8,
-                backgroundColor: 'rgba(0,0,0,0.6)',
-                color: 'white',
-                '&:hover': {
-                  backgroundColor: 'rgba(0,0,0,0.8)',
-                  color: 'primary.main'
-                }
-              }}
-              size="small"
-            >
-              <Stop />
-            </IconButton>
-          )}
+          <IconButton
+            onClick={handleStop}
+            sx={{
+              position: 'absolute',
+              left: 8,
+              top: 8,
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                color: 'primary.main'
+              }
+            }}
+            size="small"
+          >
+            <Stop />
+          </IconButton>
         </Box>
       )}
     </Card>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { Box, AppBar, Toolbar, Typography, Button } from '@mui/material'
-import { Add } from '@mui/icons-material'
+import { Box, AppBar, Toolbar, Typography, Button, ButtonGroup, Menu, MenuItem } from '@mui/material'
+import { Add, KeyboardArrowDown } from '@mui/icons-material'
 import { v4 as uuidv4 } from 'uuid'
 import { StreamGrid } from './components/StreamGrid'
 import { AddStreamDialog } from './components/AddStreamDialog'
@@ -9,6 +9,7 @@ import { Stream, StreamFormData } from './types/stream'
 
 export const App: React.FC = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
   const { streams, layout, addStream, removeStream, updateLayout, importStreams } = useStreamStore()
 
   const handleAddStream = (data: StreamFormData): void => {
@@ -20,6 +21,7 @@ export const App: React.FC = () => {
   }
 
   const handleImport = (): void => {
+    setMenuAnchorEl(null)
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.json'
@@ -44,6 +46,7 @@ export const App: React.FC = () => {
   }
 
   const handleExport = (): void => {
+    setMenuAnchorEl(null)
     const data = useStreamStore.getState().exportData()
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -71,18 +74,45 @@ export const App: React.FC = () => {
           >
             StreamGrid
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => setIsAddDialogOpen(true)}
-            sx={{
-              textTransform: 'none',
-              borderRadius: 1,
-              px: 2
+          <ButtonGroup variant="contained" sx={{ borderRadius: 1 }}>
+            <Button
+              startIcon={<Add />}
+              onClick={() => setIsAddDialogOpen(true)}
+              sx={{
+                textTransform: 'none',
+                px: 2
+              }}
+            >
+              Add Stream
+            </Button>
+            <Button
+              size="small"
+              onClick={(e) => setMenuAnchorEl(e.currentTarget)}
+              sx={{
+                px: 0.5,
+                minWidth: '36px',
+                borderLeft: '1px solid rgba(255, 255, 255, 0.3)'
+              }}
+            >
+              <KeyboardArrowDown />
+            </Button>
+          </ButtonGroup>
+          <Menu
+            anchorEl={menuAnchorEl}
+            open={Boolean(menuAnchorEl)}
+            onClose={() => setMenuAnchorEl(null)}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right'
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right'
             }}
           >
-            Add Stream
-          </Button>
+            <MenuItem onClick={handleImport}>Import JSON</MenuItem>
+            <MenuItem onClick={handleExport}>Export JSON</MenuItem>
+          </Menu>
         </Toolbar>
       </AppBar>
 
@@ -99,8 +129,6 @@ export const App: React.FC = () => {
         open={isAddDialogOpen}
         onClose={() => setIsAddDialogOpen(false)}
         onAdd={handleAddStream}
-        onImport={handleImport}
-        onExport={handleExport}
       />
     </Box>
   )

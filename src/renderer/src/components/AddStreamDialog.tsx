@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import ReactPlayer from 'react-player'
 import {
   Dialog,
   DialogTitle,
@@ -7,11 +8,8 @@ import {
   Button,
   TextField,
   Stack,
-  Menu,
-  MenuItem,
-  IconButton
+  Box
 } from '@mui/material'
-import { KeyboardArrowDown } from '@mui/icons-material'
 import { useForm, SubmitHandler } from 'react-hook-form'
 import { StreamFormData } from '../types/stream'
 
@@ -19,24 +17,45 @@ interface AddStreamDialogProps {
   open: boolean
   onClose: () => void
   onAdd: (data: StreamFormData) => void
-  onImport?: () => void
-  onExport?: () => void
 }
 
 export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
   open,
   onClose,
-  onAdd,
-  onImport,
-  onExport
+  onAdd
 }) => {
-  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null)
+  const [logoPreview, setLogoPreview] = useState<string>('')
+  const [streamPreview, setStreamPreview] = useState<string>('')
   const {
     register,
     handleSubmit,
     formState: { errors },
-    reset
+    reset,
+    watch
   } = useForm<StreamFormData>()
+
+  // Watch for changes in the logo URL and stream URL fields
+  useEffect((): (() => void) => {
+    const subscription = watch((value, { name }): void => {
+      if (name === 'logoUrl' && value.logoUrl) {
+        // Only update if it's a valid image URL
+        if (/^(https?:\/\/).+\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(value.logoUrl)) {
+          setLogoPreview(value.logoUrl)
+        } else {
+          setLogoPreview('')
+        }
+      }
+      if (name === 'streamUrl' && value.streamUrl) {
+        // Accept any URL that ReactPlayer can handle
+        if (ReactPlayer.canPlay(value.streamUrl)) {
+          setStreamPreview(value.streamUrl)
+        } else {
+          setStreamPreview('')
+        }
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [watch])
 
   const onSubmit: SubmitHandler<StreamFormData> = (data): void => {
     onAdd(data)
@@ -57,34 +76,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
         }
       }}
     >
-      <DialogTitle sx={{ pb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-        Add New Stream
-        <IconButton
-          size="small"
-          onClick={(e) => setMenuAnchor(e.currentTarget)}
-          sx={{ ml: 'auto' }}
-        >
-          <KeyboardArrowDown />
-        </IconButton>
-        <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
-          <MenuItem
-            onClick={() => {
-              setMenuAnchor(null)
-              onImport?.()
-            }}
-          >
-            Import JSON
-          </MenuItem>
-          <MenuItem
-            onClick={() => {
-              setMenuAnchor(null)
-              onExport?.()
-            }}
-          >
-            Export JSON
-          </MenuItem>
-        </Menu>
-      </DialogTitle>
+      <DialogTitle sx={{ pb: 1 }}>Add New Stream</DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
           <Stack spacing={2}>
@@ -102,6 +94,30 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
               helperText={errors.name?.message}
               autoFocus
             />
+            {logoPreview && (
+              <Box
+                sx={{
+                  width: '100%',
+                  height: 120,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: '#000',
+                  borderRadius: 1,
+                  overflow: 'hidden'
+                }}
+              >
+                <img
+                  src={logoPreview}
+                  alt="Logo Preview"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    objectFit: 'contain'
+                  }}
+                />
+              </Box>
+            )}
             <TextField
               label="Logo URL"
               fullWidth
@@ -115,14 +131,39 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
               error={!!errors.logoUrl}
               helperText={errors.logoUrl?.message}
             />
+            {streamPreview && (
+              <Box
+                sx={{
+                  width: '100%',
+                  height: 180,
+                  backgroundColor: '#000',
+                  borderRadius: 1,
+                  overflow: 'hidden'
+                }}
+              >
+                <ReactPlayer
+                  url={streamPreview}
+                  width="100%"
+                  height="100%"
+                  controls
+                  playing={false}
+                  config={{
+                    file: {
+                      attributes: {
+                        crossOrigin: "anonymous"
+                      }
+                    }
+                  }}
+                />
+              </Box>
+            )}
             <TextField
-              label="Stream URL (M3U8)"
+              label="Stream URL"
               fullWidth
               {...register('streamUrl', {
                 required: 'Stream URL is required',
-                pattern: {
-                  value: /^(https?:\/\/).+\.m3u8$/i,
-                  message: 'Please enter a valid M3U8 stream URL'
+                validate: {
+                  playable: (url) => ReactPlayer.canPlay(url) || 'Please enter a valid stream URL'
                 }
               })}
               error={!!errors.streamUrl}
