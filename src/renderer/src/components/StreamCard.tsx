@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useRef } from 'react'
 import ReactPlayer from 'react-player'
 import { Card, CardContent, CardMedia, IconButton, Typography, Box } from '@mui/material'
 import { PlayArrow, Stop, Close } from '@mui/icons-material'
@@ -13,6 +13,7 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
   const [isPlaying, setIsPlaying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const errorTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const handlePlay = useCallback((): void => {
     console.log('Attempting to play stream:', stream.streamUrl)
@@ -23,19 +24,49 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
   const handleStop = useCallback((): void => {
     setIsPlaying(false)
     setError(null)
+    if (errorTimerRef.current) {
+      clearTimeout(errorTimerRef.current)
+      errorTimerRef.current = null
+    }
   }, [])
 
   const handleReady = useCallback(() => {
     console.log('Stream ready:', stream.streamUrl)
     setIsLoading(false)
     setError(null)
+    // Clear any pending error timer when stream recovers
+    if (errorTimerRef.current) {
+      clearTimeout(errorTimerRef.current)
+      errorTimerRef.current = null
+    }
   }, [stream.streamUrl])
 
   const handleError = useCallback(() => {
-    console.error('Failed to load stream:', stream.streamUrl)
-    setError('Failed to load stream')
-    setIsLoading(false)
+    console.error('Stream connection issue:', stream.streamUrl)
+    setIsLoading(true)
+
+    // Clear any existing timer
+    if (errorTimerRef.current) {
+      clearTimeout(errorTimerRef.current)
+    }
+
+    // Set new timer for 15 seconds
+    errorTimerRef.current = setTimeout(() => {
+      console.error('Stream failed to recover:', stream.streamUrl)
+      setError('Failed to load stream')
+      setIsLoading(false)
+      errorTimerRef.current = null
+    }, 15000)
   }, [stream.streamUrl])
+
+  // Cleanup timer on unmount
+  React.useEffect(() => {
+    return (): void => {
+      if (errorTimerRef.current) {
+        clearTimeout(errorTimerRef.current)
+      }
+    }
+  }, [])
 
   return (
     <Card
