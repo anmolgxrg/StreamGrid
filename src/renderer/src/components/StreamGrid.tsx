@@ -23,8 +23,8 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
   onLayoutChange
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [dimensions, setDimensions] = useState({ width: 1200, rowHeight: 100 })
-  const aspectRatioRef = useRef(1200 / 100) // Store initial width/rowHeight ratio
+  const [dimensions, setDimensions] = useState({ width: 1200, rowHeight: 120 })
+  const aspectRatioRef = useRef(1200 / 120) // Store initial width/rowHeight ratio
   const resizeTimeoutRef = useRef<number>()
 
   useEffect((): (() => void) => {
@@ -32,8 +32,9 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth
         const newWidth = Math.max(Math.floor(containerWidth), 480) // Ensure minimum width
-        // Maintain the same aspect ratio when resizing
-        const newRowHeight = Math.floor(newWidth / aspectRatioRef.current)
+        // Calculate row height to fit the container perfectly
+        const totalMarginWidth = 11 * 4 // 11 gaps between 12 columns, 4px margin each
+        const newRowHeight = Math.floor((newWidth - totalMarginWidth) / 12) // Divide available space by columns
         setDimensions({ width: newWidth, rowHeight: newRowHeight })
       }
     }
@@ -86,7 +87,7 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
         cols={12}
         width={dimensions.width}
         rowHeight={dimensions.rowHeight}
-        margin={[8, 8]}
+        margin={[4, 4]}
         useCSSTransforms={true}
         onLayoutChange={(layout) => handleLayoutChange(layout as GridItem[])}
         isDraggable
