@@ -1,7 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import ReactPlayer from 'react-player'
 import { Card, CardContent, CardMedia, IconButton, Typography, Box } from '@mui/material'
-import { PlayArrow, Stop, Close, OpenWith, DragHandle } from '@mui/icons-material'
+import { PlayArrow, Stop, Close } from '@mui/icons-material'
 import { Stream } from '../types/stream'
 
 interface StreamCardProps {
@@ -11,12 +11,16 @@ interface StreamCardProps {
 
 export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
   const [isPlaying, setIsPlaying] = useState(false)
+  const playerRef = useRef<ReactPlayer>(null)
 
   const handlePlay = (): void => {
     setIsPlaying(true)
   }
 
   const handleStop = (): void => {
+    if (playerRef.current) {
+      playerRef.current.seekTo(0)
+    }
     setIsPlaying(false)
   }
 
@@ -30,62 +34,9 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
         position: 'relative',
         bgcolor: 'background.paper',
         borderRadius: 2,
-        overflow: 'hidden',
-        cursor: 'default'
+        overflow: 'hidden'
       }}
     >
-      <Box
-        className="resize-handle"
-        sx={{
-          position: 'absolute',
-          right: 0,
-          bottom: 0,
-          width: 24,
-          height: 24,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'rgba(0,0,0,0.6)',
-          color: 'white',
-          opacity: 0,
-          transition: 'opacity 0.2s',
-          cursor: 'se-resize',
-          zIndex: 2,
-          '&:hover': {
-            opacity: 1
-          }
-        }}
-      >
-        <OpenWith sx={{ fontSize: 16, transform: 'rotate(45deg)' }} />
-      </Box>
-      <Box
-        className="drag-handle"
-        sx={{
-          position: 'absolute',
-          left: 8,
-          top: 8,
-          width: 24,
-          height: 24,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'rgba(0,0,0,0.6)',
-          color: 'white',
-          opacity: 0.6,
-          transition: 'opacity 0.2s',
-          cursor: 'grab',
-          zIndex: 2,
-          '&:hover': {
-            opacity: 1
-          },
-          '&:active': {
-            cursor: 'grabbing'
-          }
-        }}
-      >
-        <DragHandle fontSize="small" />
-      </Box>
-
       <IconButton
         onClick={(e) => {
           e.stopPropagation()
@@ -153,17 +104,15 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
       ) : (
         <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
           <ReactPlayer
+            ref={playerRef}
             url={stream.streamUrl}
             width="100%"
             height="100%"
-            playing={isPlaying}
-            controls
-            style={{ backgroundColor: '#000' }}
-            config={{
-              file: {
-                attributes: {
-                  crossOrigin: "anonymous"
-                }
+            playing={true}
+            controls={true}
+            onReady={() => {
+              if (playerRef.current) {
+                playerRef.current.seekTo(0)
               }
             }}
           />
