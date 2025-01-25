@@ -23,18 +23,21 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
   onLayoutChange
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [dimensions, setDimensions] = useState({ width: 1200, rowHeight: 120 })
-  const aspectRatioRef = useRef(1200 / 120) // Store initial width/rowHeight ratio
+  const [dimensions, setDimensions] = useState({ width: 1200, rowHeight: 100 })
   const resizeTimeoutRef = useRef<number>()
+  const ASPECT_RATIO = 16 / 9 // Standard video aspect ratio
 
   useEffect((): (() => void) => {
     const updateDimensions = (): void => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth
         const newWidth = Math.max(Math.floor(containerWidth), 480) // Ensure minimum width
-        // Calculate row height to fit the container perfectly
-        const totalMarginWidth = 11 * 4 // 11 gaps between 12 columns, 4px margin each
-        const newRowHeight = Math.floor((newWidth - totalMarginWidth) / 12) // Divide available space by columns
+
+        // Calculate row height to maintain aspect ratio
+        const horizontalMargins = 11 * 4 // 11 gaps between 12 columns, 4px margin each
+        const availableWidth = newWidth - horizontalMargins
+        const columnWidth = availableWidth / 12
+        const newRowHeight = Math.floor(columnWidth / ASPECT_RATIO)
         setDimensions({ width: newWidth, rowHeight: newRowHeight })
       }
     }
@@ -56,13 +59,7 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
     }
   }, [])
 
-  // Update aspect ratio when layout changes
   const handleLayoutChange = (newLayout: GridItem[]): void => {
-    if (containerRef.current) {
-      const containerWidth = containerRef.current.offsetWidth
-      // Update the aspect ratio based on current dimensions
-      aspectRatioRef.current = containerWidth / dimensions.rowHeight
-    }
     onLayoutChange(newLayout)
   }
 
@@ -95,6 +92,7 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
         isResizable
         compactType={null}
         preventCollision
+        maxRows={12}
       >
         {streams.map((stream) => (
           <div key={stream.id}>
