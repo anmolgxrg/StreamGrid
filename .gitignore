@@ -55,3 +55,4 @@ lerna-debug.log*
 
 # Yarn Integrity file
 .yarn-integrity
+.vscode/extensions.json
