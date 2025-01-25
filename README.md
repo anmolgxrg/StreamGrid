@@ -1,7 +1,7 @@
 # StreamGrid
 
 <div align="center">
-  <img src="resources/icon.svg" alt="StreamGrid Logo" width="200"/>
+  <img src="src/renderer/src/assets/StreamGrid.svg" alt="StreamGrid Logo" width="200"/>
   <h3>A Modern Stream Management Desktop Application</h3>
 </div>
 
