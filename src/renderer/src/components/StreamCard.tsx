@@ -1,15 +1,44 @@
-import React, { useState, useCallback, useRef } from 'react'
-import ReactPlayer from 'react-player'
-import { Card, CardMedia, IconButton, Typography, Box } from '@mui/material'
+import React, { useState, useCallback, useRef, memo, lazy, Suspense } from 'react'
+import PropTypes from 'prop-types'
+import { Card, CardMedia, IconButton, Typography, Box, CircularProgress } from '@mui/material'
 import { PlayArrow, Stop, Close } from '@mui/icons-material'
 import { Stream } from '../types/stream'
+import { StreamErrorBoundary } from './StreamErrorBoundary'
+
+// Lazy load ReactPlayer for better initial load time
+const ReactPlayer = lazy(() => import('react-player'))
+
+// Move player config outside component to prevent recreation
+const PLAYER_CONFIG = {
+  file: {
+    attributes: {
+      crossOrigin: 'anonymous'
+    },
+    forceHLS: true,
+    hlsVersion: '1.4.12',
+    hlsOptions: {
+      enableWorker: false,
+      lowLatencyMode: true,
+      backBufferLength: 90,
+      liveDurationInfinity: true,
+      debug: false,
+      xhrSetup: (xhr: XMLHttpRequest): void => {
+        xhr.withCredentials = false
+      },
+      manifestLoadingTimeOut: 10000,
+      manifestLoadingMaxRetry: 3,
+      levelLoadingTimeOut: 10000,
+      levelLoadingMaxRetry: 3
+    }
+  }
+}
 
 interface StreamCardProps {
   stream: Stream
   onRemove: (id: string) => void
 }
 
-export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
+const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove }) => {
   const [isPlaying, setIsPlaying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -199,41 +228,27 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
             }}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <ReactPlayer
-              url={stream.streamUrl}
-              width="100%"
-              height="100%"
-              playing={true}
-              controls={true}
-              onReady={handleReady}
-              onError={handleError}
-              config={{
-                file: {
-                  attributes: {
-                    crossOrigin: 'anonymous'
-                  },
-                  forceHLS: true,
-                  hlsVersion: '1.4.12',
-                  hlsOptions: {
-                    enableWorker: false,
-                    lowLatencyMode: true,
-                    backBufferLength: 90,
-                    liveDurationInfinity: true,
-                    debug: false,
-                    xhrSetup: (xhr) => {
-                      xhr.withCredentials = false
-                    },
-                    manifestLoadingTimeOut: 10000,
-                    manifestLoadingMaxRetry: 3,
-                    levelLoadingTimeOut: 10000,
-                    levelLoadingMaxRetry: 3
-                  }
-                }
-              }}
-              playsinline
-              stopOnUnmount
-              pip={false}
-            />
+      <StreamErrorBoundary>
+        <Suspense fallback={
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+            <CircularProgress />
+          </Box>
+        }>
+          <ReactPlayer
+            url={stream.streamUrl}
+            width="100%"
+            height="100%"
+            playing={true}
+            controls={true}
+            onReady={handleReady}
+            onError={handleError}
+            config={PLAYER_CONFIG}
+            playsinline
+            stopOnUnmount
+            pip={false}
+          />
+        </Suspense>
+      </StreamErrorBoundary>
           </Box>
           {(error || isLoading) && (
             <Box
@@ -294,4 +309,18 @@ export const StreamCard: React.FC<StreamCardProps> = ({ stream, onRemove }) => {
       )}
     </Card>
   )
+})
+
+StreamCard.displayName = 'StreamCard'
+
+StreamCard.propTypes = {
+  stream: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    streamUrl: PropTypes.string.isRequired,
+    logoUrl: PropTypes.string.isRequired
+  }).isRequired,
+  onRemove: PropTypes.func.isRequired
 }
+
+export { StreamCard }

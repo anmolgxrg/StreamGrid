@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Box, AppBar, Toolbar, Typography, Button, ButtonGroup, Menu, MenuItem, Link } from '@mui/material'
 import { Add, KeyboardArrowDown, GitHub } from '@mui/icons-material'
 import StreamGridLogo from './assets/StreamGrid.svg'
@@ -7,12 +7,27 @@ import { StreamGrid } from './components/StreamGrid'
 import { AddStreamDialog } from './components/AddStreamDialog'
 import { useStreamStore } from './store/useStreamStore'
 import { Stream, StreamFormData } from './types/stream'
+import { LoadingScreen } from './components/LoadingScreen'
 
 export const App: React.FC = () => {
+  const [isLoading, setIsLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
   const [aboutAnchorEl, setAboutAnchorEl] = useState<null | HTMLElement>(null)
   const { streams, layout, addStream, removeStream, updateLayout, importStreams } = useStreamStore()
+
+  useEffect((): (() => void) => {
+    // Simulate loading time to ensure all resources are properly loaded
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 2000)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (isLoading) {
+    return <LoadingScreen />
+  }
 
   const handleAddStream = (data: StreamFormData): void => {
     const newStream: Stream = {
@@ -34,8 +49,9 @@ export const App: React.FC = () => {
         reader.onload = (e): void => {
           try {
             const content = JSON.parse(e.target?.result as string)
-            if (content.streams && content.layout) {
-              importStreams(content.streams, content.layout)
+            const result = importStreams(content)
+            if (!result.success) {
+              console.error('Import failed:', result.error)
             }
           } catch (error) {
             console.error('Error importing file:', error)

@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 // eslint-disable-next-line prettier/prettier
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 // eslint-disable-next-line prettier/prettier
 import GridLayout from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
@@ -9,6 +9,29 @@ import { Box } from '@mui/material'
 import { Stream, GridItem } from '../types/stream'
 import { StreamCard } from './StreamCard'
 
+// Move calculateMargins outside component to prevent recreation
+const calculateMargins = (): {
+  horizontal: number;
+  vertical: number;
+  edgeHorizontal: number;
+  edgeVertical: number;
+} => {
+  const viewportWidth = window.innerWidth
+  const horizontalMargin = Math.max(Math.floor(viewportWidth * 0.004), 2)
+  const verticalMargin = Math.max(Math.floor(viewportWidth * 0.003), 2)
+  const edgeHorizontal = horizontalMargin * 7.5
+  const edgeVertical = verticalMargin * 5
+
+  return {
+    horizontal: horizontalMargin,
+    vertical: verticalMargin,
+    edgeHorizontal,
+    edgeVertical
+  }
+}
+
+const ASPECT_RATIO = 16 / 9 // Standard video aspect ratio
+
 interface StreamGridProps {
   streams: Stream[]
   layout: GridItem[]
@@ -16,84 +39,60 @@ interface StreamGridProps {
   onLayoutChange: (layout: GridItem[]) => void
 }
 
-export const StreamGrid: React.FC<StreamGridProps> = ({
-  streams,
-  layout,
-  onRemoveStream,
-  onLayoutChange
-}) => {
+export const StreamGrid = React.memo(({ streams, layout, onRemoveStream, onLayoutChange }: StreamGridProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 1200, rowHeight: 100 })
   const resizeTimeoutRef = useRef<number>()
-  const ASPECT_RATIO = 16 / 9 // Standard video aspect ratio
-  const calculateMargins = (): {
-    horizontal: number;
-    vertical: number;
-    edgeHorizontal: number;
-    edgeVertical: number;
-  } => {
-    // Base margins on viewport width for consistent proportions
-    const viewportWidth = window.innerWidth
-    // Smaller margins between cards
-    const horizontalMargin = Math.max(Math.floor(viewportWidth * 0.004), 2) // 0.4% of viewport width, minimum 2px
-    const verticalMargin = Math.max(Math.floor(viewportWidth * 0.003), 2) // 0.3% of viewport width, minimum 2px
 
-    // Larger margins for viewport edges (7.5 * card margins)
-    const edgeHorizontal = horizontalMargin * 7.5
-    const edgeVertical = verticalMargin * 5
+  const updateDimensions = useCallback((): void => {
+    if (containerRef.current) {
+      const containerWidth = containerRef.current.offsetWidth
+      const newWidth = Math.max(Math.floor(containerWidth), 480)
 
-    return {
-      horizontal: horizontalMargin,
-      vertical: verticalMargin,
-      edgeHorizontal,
-      edgeVertical
+      const containerHeight = window.innerHeight
+      const margins = calculateMargins()
+      const horizontalMargins = margins.edgeHorizontal
+      const verticalMargins = margins.edgeVertical
+      const availableWidth = newWidth - horizontalMargins
+      const availableHeight = containerHeight - verticalMargins
+
+      const columnWidth = availableWidth / 12
+      const maxRowsByWidth = Math.floor(columnWidth / ASPECT_RATIO)
+      const maxRowsByHeight = Math.floor(availableHeight / 12)
+      const newRowHeight = Math.min(maxRowsByWidth, maxRowsByHeight)
+      setDimensions({ width: newWidth, rowHeight: newRowHeight })
     }
-  }
+  }, [])
 
-  useEffect((): (() => void) => {
-    const updateDimensions = (): void => {
-      if (containerRef.current) {
-        const containerWidth = containerRef.current.offsetWidth
-        const newWidth = Math.max(Math.floor(containerWidth), 480) // Ensure minimum width
-
-        // Calculate row height to maintain aspect ratio
-        // Calculate available height and width
-        const containerHeight = window.innerHeight
-        const margins = calculateMargins()
-        const horizontalMargins = margins.edgeHorizontal // Use edge margins for viewport edges
-        const verticalMargins = margins.edgeVertical // Use edge margins for viewport edges
-        const availableWidth = newWidth - horizontalMargins
-        const availableHeight = containerHeight - verticalMargins
-
-        // Calculate row height that fits both width and height constraints
-        const columnWidth = availableWidth / 12
-        const maxRowsByWidth = Math.floor(columnWidth / ASPECT_RATIO)
-        const maxRowsByHeight = Math.floor(availableHeight / 12)
-        const newRowHeight = Math.min(maxRowsByWidth, maxRowsByHeight)
-        setDimensions({ width: newWidth, rowHeight: newRowHeight })
-      }
+  const debouncedUpdateDimensions = useCallback((): void => {
+    if (resizeTimeoutRef.current) {
+      window.clearTimeout(resizeTimeoutRef.current)
     }
+    resizeTimeoutRef.current = window.setTimeout(updateDimensions, 100)
+  }, [updateDimensions])
 
-    const debouncedUpdateDimensions = (): void => {
-      if (resizeTimeoutRef.current) {
-        window.clearTimeout(resizeTimeoutRef.current)
-      }
-      resizeTimeoutRef.current = window.setTimeout(updateDimensions, 100)
-    }
-
+  useEffect(() => {
     updateDimensions()
     window.addEventListener('resize', debouncedUpdateDimensions)
-    return (): void => {
+    return () => {
       window.removeEventListener('resize', debouncedUpdateDimensions)
       if (resizeTimeoutRef.current) {
         window.clearTimeout(resizeTimeoutRef.current)
       }
     }
-  }, [])
+  }, [updateDimensions, debouncedUpdateDimensions])
 
-  const handleLayoutChange = (newLayout: GridItem[]): void => {
+  const handleLayoutChange = useCallback((newLayout: GridItem[]): void => {
     onLayoutChange(newLayout)
-  }
+  }, [onLayoutChange])
+
+  const memoizedStreams = useMemo(() => (
+    streams.map(stream => (
+      <div key={stream.id}>
+        <StreamCard stream={stream} onRemove={onRemoveStream} />
+      </div>
+    ))
+  ), [streams, onRemoveStream])
 
   return (
     <Box
@@ -139,12 +138,10 @@ export const StreamGrid: React.FC<StreamGridProps> = ({
         allowOverlap={true}
         maxRows={12}
       >
-        {streams.map((stream) => (
-          <div key={stream.id}>
-            <StreamCard stream={stream} onRemove={onRemoveStream} />
-          </div>
-        ))}
+        {memoizedStreams}
       </GridLayout>
     </Box>
   )
-}
+})
+
+StreamGrid.displayName = 'StreamGrid'
