@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react'
-import { Box, AppBar, Toolbar, Typography, Button, ButtonGroup, Menu, MenuItem, Link } from '@mui/material'
+import {
+  Box,
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  ButtonGroup,
+  Menu,
+  MenuItem,
+  Link
+} from '@mui/material'
 import { Add, KeyboardArrowDown, GitHub } from '@mui/icons-material'
 import StreamGridLogo from './assets/StreamGrid.svg'
 import { v4 as uuidv4 } from 'uuid'
@@ -14,7 +24,9 @@ export const App: React.FC = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
   const [aboutAnchorEl, setAboutAnchorEl] = useState<null | HTMLElement>(null)
-  const { streams, layout, addStream, removeStream, updateLayout, importStreams } = useStreamStore()
+  const { streams, layout, addStream, removeStream, updateLayout, importStreams, updateStream } =
+    useStreamStore()
+  const [editingStream, setEditingStream] = useState<Stream | undefined>(undefined)
 
   useEffect((): (() => void) => {
     // Simulate loading time to ensure all resources are properly loaded
@@ -35,6 +47,15 @@ export const App: React.FC = () => {
       ...data
     }
     addStream(newStream)
+  }
+
+  const handleEditStream = (stream: Stream): void => {
+    setEditingStream(stream)
+    setIsAddDialogOpen(true)
+  }
+
+  const handleUpdateStream = (id: string, data: StreamFormData): void => {
+    updateStream(id, data)
   }
 
   const handleImport = (): void => {
@@ -200,13 +221,19 @@ export const App: React.FC = () => {
           layout={layout}
           onRemoveStream={removeStream}
           onLayoutChange={updateLayout}
+          onEditStream={handleEditStream}
         />
       </Box>
 
       <AddStreamDialog
         open={isAddDialogOpen}
-        onClose={() => setIsAddDialogOpen(false)}
+        onClose={() => {
+          setIsAddDialogOpen(false)
+          setEditingStream(undefined)
+        }}
         onAdd={handleAddStream}
+        onEdit={handleUpdateStream}
+        editStream={editingStream}
       />
     </Box>
   )

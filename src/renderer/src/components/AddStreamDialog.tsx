@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, KeyboardEvent } from 'react'
 import ReactPlayer from 'react-player'
 import {
   Dialog,
@@ -9,62 +9,77 @@ import {
   Button,
   TextField,
   Stack,
-  Box
+  Box,
+  Typography,
+  Paper
 } from '@mui/material'
-import { useForm, SubmitHandler } from 'react-hook-form'
-import { StreamFormData } from '../types/stream'
+import { Stream, StreamFormData } from '../types/stream'
 
 interface AddStreamDialogProps {
   open: boolean
   onClose: () => void
   onAdd: (data: StreamFormData) => void
+  onEdit?: (id: string, data: StreamFormData) => void
+  editStream?: Stream
 }
 
-export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose, onAdd }) => {
+export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose, onAdd, onEdit, editStream }): JSX.Element => {
   const [logoPreview, setLogoPreview] = useState<string>('')
   const [streamPreview, setStreamPreview] = useState<string>('')
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-    watch
-  } = useForm<StreamFormData>()
+  const [formData, setFormData] = useState<StreamFormData>({
+    name: '',
+    logoUrl: '',
+    streamUrl: ''
+  })
 
-  // Watch for changes in the logo URL and stream URL fields
-  useEffect((): (() => void) => {
-    const subscription = watch((value, { name }): void => {
-      if (name === 'logoUrl' && value.logoUrl) {
-        // Only update if it's a valid image URL
-        if (/^(https?:\/\/).+\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(value.logoUrl)) {
-          setLogoPreview(value.logoUrl)
-        } else {
-          setLogoPreview('')
-        }
-      }
-      if (name === 'streamUrl' && value.streamUrl) {
-        // Accept any URL that ReactPlayer can handle
-        if (ReactPlayer.canPlay(value.streamUrl)) {
-          setStreamPreview(value.streamUrl)
-        } else {
-          setStreamPreview('')
-        }
-      }
-    })
-    return () => subscription.unsubscribe()
-  }, [watch])
+  const isValid = useCallback((): boolean => {
+    return (
+      formData.name.length >= 2 &&
+      /^(https?:\/\/).+\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(formData.logoUrl) &&
+      ReactPlayer.canPlay(formData.streamUrl)
+    )
+  }, [formData])
 
-  const onSubmit: SubmitHandler<StreamFormData> = (data): void => {
-    onAdd(data)
-    reset()
+  const handleSubmit = useCallback((): void => {
+    if (editStream && onEdit) {
+      onEdit(editStream.id, formData)
+    } else {
+      onAdd(formData)
+    }
     onClose()
-  }
+  }, [editStream, onEdit, onAdd, formData, onClose])
+
+  // Handle keyboard shortcuts
+  const handleKeyDown = useCallback((e: KeyboardEvent): void => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && isValid()) {
+      handleSubmit()
+    }
+  }, [isValid, handleSubmit])
+
+  // Reset form when dialog opens/closes
+  useEffect(() => {
+    if (open) {
+      if (editStream) {
+        setFormData({
+          name: editStream.name,
+          logoUrl: editStream.logoUrl,
+          streamUrl: editStream.streamUrl
+        })
+        setLogoPreview(editStream.logoUrl)
+        setStreamPreview(editStream.streamUrl)
+      } else {
+        setFormData({ name: '', logoUrl: '', streamUrl: '' })
+        setLogoPreview('')
+        setStreamPreview('')
+      }
+    }
+  }, [open, editStream])
 
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="sm"
+      maxWidth="xs"
       fullWidth
       PaperProps={{
         sx: {
@@ -73,33 +88,50 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
         }
       }}
     >
-      <DialogTitle sx={{ pb: 1 }}>Add New Stream</DialogTitle>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogContent>
-          <Stack spacing={2}>
+      <DialogTitle>
+        {editStream ? 'Edit Stream' : 'Add Stream'}
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+          Press ⌘/Ctrl + Enter to save
+        </Typography>
+      </DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ pt: 1 }}>
+          <TextField
+            label="Name"
+            fullWidth
+            value={formData.name}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            error={formData.name.length > 0 && formData.name.length < 2}
+            helperText={formData.name.length > 0 && formData.name.length < 2 ? 'Min 2 characters' : ' '}
+            autoFocus
+            onKeyDown={handleKeyDown}
+          />
+
+          <Box>
             <TextField
-              label="Stream Name"
+              label="Logo URL"
               fullWidth
-              {...register('name', {
-                required: 'Stream name is required',
-                minLength: {
-                  value: 2,
-                  message: 'Name must be at least 2 characters'
+              value={formData.logoUrl}
+              onChange={(e) => {
+                const url = e.target.value
+                setFormData(prev => ({ ...prev, logoUrl: url }))
+                if (/^(https?:\/\/).+\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(url)) {
+                  setLogoPreview(url)
                 }
-              })}
-              error={!!errors.name}
-              helperText={errors.name?.message}
-              autoFocus
+              }}
+              error={formData.logoUrl.length > 0 && !/^(https?:\/\/).+\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(formData.logoUrl)}
+              helperText={formData.logoUrl.length > 0 && !/^(https?:\/\/).+\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(formData.logoUrl) ? 'Invalid image URL' : ' '}
             />
             {logoPreview && (
-              <Box
+              <Paper
+                elevation={1}
                 sx={{
-                  width: '100%',
-                  height: 120,
+                  mt: 1,
+                  height: '80px',
                   display: 'flex',
-                  justifyContent: 'center',
                   alignItems: 'center',
-                  backgroundColor: '#000',
+                  justifyContent: 'center',
+                  bgcolor: 'black',
                   borderRadius: 1,
                   overflow: 'hidden'
                 }}
@@ -113,27 +145,32 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
                     objectFit: 'contain'
                   }}
                 />
-              </Box>
+              </Paper>
             )}
+          </Box>
+
+          <Box>
             <TextField
-              label="Logo URL"
+              label="Stream URL"
               fullWidth
-              {...register('logoUrl', {
-                required: 'Logo URL is required',
-                pattern: {
-                  value: /^(https?:\/\/)?.+\.(jpg|jpeg|png|gif|bmp|webp)$/i,
-                  message: 'Please enter a valid image URL'
+              value={formData.streamUrl}
+              onChange={(e) => {
+                const url = e.target.value
+                setFormData(prev => ({ ...prev, streamUrl: url }))
+                if (ReactPlayer.canPlay(url)) {
+                  setStreamPreview(url)
                 }
-              })}
-              error={!!errors.logoUrl}
-              helperText={errors.logoUrl?.message}
+              }}
+              error={formData.streamUrl.length > 0 && !ReactPlayer.canPlay(formData.streamUrl)}
+              helperText={formData.streamUrl.length > 0 && !ReactPlayer.canPlay(formData.streamUrl) ? 'Invalid stream URL' : ' '}
             />
             {streamPreview && (
-              <Box
+              <Paper
+                elevation={1}
                 sx={{
-                  width: '100%',
-                  height: 180,
-                  backgroundColor: '#000',
+                  mt: 1,
+                  height: '120px',
+                  bgcolor: 'black',
                   borderRadius: 1,
                   overflow: 'hidden'
                 }}
@@ -152,47 +189,36 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
                     }
                   }}
                 />
-              </Box>
+              </Paper>
             )}
-            <TextField
-              label="Stream URL"
-              fullWidth
-              {...register('streamUrl', {
-                required: 'Stream URL is required',
-                validate: {
-                  playable: (url) => ReactPlayer.canPlay(url) || 'Please enter a valid stream URL'
-                }
-              })}
-              error={!!errors.streamUrl}
-              helperText={errors.streamUrl?.message}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={onClose}
-            sx={{
-              color: 'text.secondary',
-              '&:hover': {
-                backgroundColor: 'action.hover'
-              }
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            sx={{
-              px: 3,
-              borderRadius: 1,
-              textTransform: 'none'
-            }}
-          >
-            Add Stream
-          </Button>
-        </DialogActions>
-      </form>
+          </Box>
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button
+          onClick={onClose}
+          sx={{
+            color: 'text.secondary',
+            '&:hover': {
+              backgroundColor: 'action.hover'
+            }
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={!isValid()}
+          sx={{
+            px: 3,
+            borderRadius: 1,
+            textTransform: 'none'
+          }}
+        >
+          {editStream ? 'Save Changes' : 'Add Stream'}
+        </Button>
+      </DialogActions>
     </Dialog>
   )
 }

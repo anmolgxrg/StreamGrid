@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, memo, lazy, Suspense } from 'react'
 import PropTypes from 'prop-types'
 import { Card, CardMedia, IconButton, Typography, Box, CircularProgress } from '@mui/material'
-import { PlayArrow, Stop, Close } from '@mui/icons-material'
+import { PlayArrow, Stop, Close, Edit } from '@mui/icons-material'
 import { Stream } from '../types/stream'
 import { StreamErrorBoundary } from './StreamErrorBoundary'
 
@@ -36,9 +36,10 @@ const PLAYER_CONFIG = {
 interface StreamCardProps {
   stream: Stream
   onRemove: (id: string) => void
+  onEdit: (stream: Stream) => void
 }
 
-const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove }) => {
+const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit }) => {
   const [isPlaying, setIsPlaying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -110,18 +111,24 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove }) => {
         overflow: 'hidden'
       }}
     >
-      <Box sx={{ position: 'relative', height: '40px', flexShrink: 0, bgcolor: 'rgba(0,0,0,0.8)' }}>
+      <Box
+        sx={{
+          position: 'relative',
+          height: '40px',
+          flexShrink: 0,
+          bgcolor: 'rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          px: 1
+        }}
+      >
         <Typography
           variant="subtitle2"
           noWrap
           sx={{
             color: 'white',
-            position: 'absolute',
-            left: 8,
-            right: 40,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            pointerEvents: 'none' // Make text non-interactive
+            minWidth: 0,
+            mr: 1
           }}
         >
           {stream.name}
@@ -129,43 +136,71 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove }) => {
         <Box
           className="drag-handle"
           sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
+            flex: 1,
             height: '100%',
             cursor: 'move',
-            backgroundColor: 'rgba(0,0,0,0.0)',
-            transition: 'background-color 0.2s',
             '&:hover': {
-              backgroundColor: 'rgba(0,0,0,0.2)'
+              bgcolor: 'rgba(255,255,255,0.1)'
             }
           }}
         />
+
+        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+          {isPlaying && (
+            <IconButton
+              onClick={handleStop}
+              sx={{
+                backgroundColor: 'rgba(0,0,0,0.4)',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(0,0,0,0.6)',
+                  color: 'error.main'
+                },
+                padding: '4px'
+              }}
+              size="small"
+            >
+              <Stop fontSize="small" />
+            </IconButton>
+          )}
+          <IconButton
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit(stream)
+            }}
+            sx={{
+              backgroundColor: 'rgba(0,0,0,0.4)',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(0,0,0,0.6)',
+                color: 'primary.main'
+              },
+              padding: '4px'
+            }}
+            size="small"
+          >
+            <Edit fontSize="small" />
+          </IconButton>
+          <IconButton
+            onClick={(e) => {
+              e.stopPropagation()
+              onRemove(stream.id)
+            }}
+            sx={{
+              backgroundColor: 'rgba(0,0,0,0.4)',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(0,0,0,0.6)',
+                color: 'error.main'
+              },
+              padding: '4px'
+            }}
+            size="small"
+          >
+            <Close fontSize="small" />
+          </IconButton>
+        </Box>
       </Box>
-      <IconButton
-        onClick={(e) => {
-          e.stopPropagation()
-          onRemove(stream.id)
-        }}
-        sx={{
-          position: 'absolute',
-          right: 8,
-          top: 8,
-          zIndex: 2,
-          backgroundColor: 'rgba(0,0,0,0.6)',
-          color: 'white',
-          '&:hover': {
-            backgroundColor: 'rgba(0,0,0,0.8)'
-          },
-          width: 24,
-          height: 24,
-          padding: '0px'
-        }}
-        size="small"
-      >
-        <Close fontSize="small" />
-      </IconButton>
 
       {!isPlaying ? (
         <Box
@@ -228,27 +263,36 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove }) => {
             }}
             onMouseDown={(e) => e.stopPropagation()}
           >
-      <StreamErrorBoundary>
-        <Suspense fallback={
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-            <CircularProgress />
-          </Box>
-        }>
-          <ReactPlayer
-            url={stream.streamUrl}
-            width="100%"
-            height="100%"
-            playing={true}
-            controls={true}
-            onReady={handleReady}
-            onError={handleError}
-            config={PLAYER_CONFIG}
-            playsinline
-            stopOnUnmount
-            pip={false}
-          />
-        </Suspense>
-      </StreamErrorBoundary>
+            <StreamErrorBoundary>
+              <Suspense
+                fallback={
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      height: '100%'
+                    }}
+                  >
+                    <CircularProgress />
+                  </Box>
+                }
+              >
+                <ReactPlayer
+                  url={stream.streamUrl}
+                  width="100%"
+                  height="100%"
+                  playing={true}
+                  controls={true}
+                  onReady={handleReady}
+                  onError={handleError}
+                  config={PLAYER_CONFIG}
+                  playsinline
+                  stopOnUnmount
+                  pip={false}
+                />
+              </Suspense>
+            </StreamErrorBoundary>
           </Box>
           {(error || isLoading) && (
             <Box
@@ -262,7 +306,15 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove }) => {
               }}
             >
               {error ? (
-                <Typography sx={{ color: 'error.main', px: 2, py: 1, bgcolor: 'rgba(255,0,0,0.2)', borderRadius: 1 }}>
+                <Typography
+                  sx={{
+                    color: 'error.main',
+                    px: 2,
+                    py: 1,
+                    bgcolor: 'rgba(255,0,0,0.2)',
+                    borderRadius: 1
+                  }}
+                >
                   {error}
                 </Typography>
               ) : (
@@ -277,34 +329,17 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove }) => {
                     animation: 'spin 1s linear infinite',
                     '@keyframes spin': {
                       '0%': {
-                        transform: 'rotate(0deg)',
+                        transform: 'rotate(0deg)'
                       },
                       '100%': {
-                        transform: 'rotate(360deg)',
-                      },
-                    },
+                        transform: 'rotate(360deg)'
+                      }
+                    }
                   }}
                 />
               )}
             </Box>
           )}
-          <IconButton
-            onClick={handleStop}
-            sx={{
-              position: 'absolute',
-              left: 8,
-              top: 8,
-              backgroundColor: 'rgba(0,0,0,0.6)',
-              color: 'white',
-              '&:hover': {
-                backgroundColor: 'rgba(0,0,0,0.8)',
-                color: 'primary.main'
-              }
-            }}
-            size="small"
-          >
-            <Stop />
-          </IconButton>
         </Box>
       )}
     </Card>
@@ -320,7 +355,8 @@ StreamCard.propTypes = {
     streamUrl: PropTypes.string.isRequired,
     logoUrl: PropTypes.string.isRequired
   }).isRequired,
-  onRemove: PropTypes.func.isRequired
+  onRemove: PropTypes.func.isRequired,
+  onEdit: PropTypes.func.isRequired
 }
 
 export { StreamCard }

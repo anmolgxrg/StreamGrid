@@ -37,9 +37,10 @@ interface StreamGridProps {
   layout: GridItem[]
   onRemoveStream: (id: string) => void
   onLayoutChange: (layout: GridItem[]) => void
+  onEditStream: (stream: Stream) => void
 }
 
-export const StreamGrid = React.memo(({ streams, layout, onRemoveStream, onLayoutChange }: StreamGridProps) => {
+export const StreamGrid = React.memo(({ streams, layout, onRemoveStream, onLayoutChange, onEditStream }: StreamGridProps): JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 1200, rowHeight: 100 })
   const resizeTimeoutRef = useRef<number>()
@@ -71,7 +72,7 @@ export const StreamGrid = React.memo(({ streams, layout, onRemoveStream, onLayou
     resizeTimeoutRef.current = window.setTimeout(updateDimensions, 100)
   }, [updateDimensions])
 
-  useEffect(() => {
+  useEffect((): (() => void) => {
     updateDimensions()
     window.addEventListener('resize', debouncedUpdateDimensions)
     return () => {
@@ -89,10 +90,10 @@ export const StreamGrid = React.memo(({ streams, layout, onRemoveStream, onLayou
   const memoizedStreams = useMemo(() => (
     streams.map(stream => (
       <div key={stream.id}>
-        <StreamCard stream={stream} onRemove={onRemoveStream} />
+        <StreamCard stream={stream} onRemove={onRemoveStream} onEdit={onEditStream} />
       </div>
     ))
-  ), [streams, onRemoveStream])
+  ), [streams, onRemoveStream, onEditStream])
 
   return (
     <Box
@@ -129,7 +130,7 @@ export const StreamGrid = React.memo(({ streams, layout, onRemoveStream, onLayou
         rowHeight={dimensions.rowHeight}
         margin={[calculateMargins().horizontal, calculateMargins().vertical]} // Use smaller margins between cards
         useCSSTransforms={true}
-        onLayoutChange={(layout) => handleLayoutChange(layout as GridItem[])}
+        onLayoutChange={(layout): void => handleLayoutChange(layout as GridItem[])}
         isDraggable
         draggableHandle=".drag-handle"
         isResizable
