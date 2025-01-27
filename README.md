@@ -37,7 +37,7 @@ StreamGrid revolutionizes multi-stream viewing by giving you complete freedom ov
   
 ### Option 1: Install from Releases
 
-1. Visit the [Releases](https://github.com/yourusername/streamgrid/releases) section of the repository.
+1. Visit the [Releases](https://github.com/LordKnish/StreamGrid/releases) section of the repository.
 2. Download the latest executable for your platform:
    - **Windows**: `.exe`
    - **macOS**: `.dmg`
