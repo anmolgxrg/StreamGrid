@@ -9,7 +9,7 @@ StreamGrid revolutionizes multi-stream viewing by giving you complete freedom ov
 
 ## ✨ Features
 
-- **Ultimate Layout Flexibility** (Our Core Feature):
+- **Ultimate Layout Flexibility**:
   - Create ANY layout you can imagine - from 2 streams to 5+ streams
   - Make streams any size you want - go big with your main stream while keeping others visible
   - Perfect for scenarios like:
@@ -23,6 +23,7 @@ StreamGrid revolutionizes multi-stream viewing by giving you complete freedom ov
   - Add new streams with custom names and logos
   - Remove streams with a single click
   - Persistent layout saving
+  - Export and Import your stream setups to share with friends
 - **Responsive Design**: Automatically adjusts to window size while maintaining video aspect ratios
 - **HLS Support**: Compatible with HTTP Live Streaming (HLS) video sources
 - **Cross-Platform**: Available for Windows, macOS, and Linux
@@ -33,8 +34,17 @@ StreamGrid revolutionizes multi-stream viewing by giving you complete freedom ov
 
 - Node.js 18.x or higher
 - npm 9.x or higher
+  
+### Option 1: Install from Releases
 
-### Installation
+1. Visit the [Releases](https://github.com/yourusername/streamgrid/releases) section of the repository.
+2. Download the latest executable for your platform:
+   - **Windows**: `.exe`
+   - **macOS**: `.dmg`
+   - **Linux**: `.AppImage` or equivalent
+3. Run the executable and start using StreamGrid immediately.
+
+### Option 2: Compile Yourself
 
 1. Clone the repository:
 ```bash
@@ -86,21 +96,6 @@ npm run build:linux
   - [React Player](https://github.com/cookpete/react-player)
 - **Layout**: [React Grid Layout](https://github.com/react-grid-layout/react-grid-layout)
 - **Form Handling**: [React Hook Form](https://react-hook-form.com/)
-
-## 🧰 Development Tools
-
-- [VSCode](https://code.visualstudio.com/) - Recommended IDE
-- [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) - Code linting
-- [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) - Code formatting
-
-## 📝 Scripts
-
-- `npm run dev` - Start the development server
-- `npm run build` - Build the application
-- `npm run lint` - Lint the codebase
-- `npm run format` - Format code with Prettier
-- `npm run typecheck` - Run TypeScript type checking
-- `npm start` - Preview the built application
 
 ## 🏗 Project Structure
 
