@@ -70,7 +70,7 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       devTools: true,
-      webSecurity: false // Required for loading external media
+      webSecurity: true // Enable web security for better protection
     }
   })
 

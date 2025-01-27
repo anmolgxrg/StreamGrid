@@ -32,13 +32,25 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
     streamUrl: ''
   })
 
+  const isValidImageUrl = useCallback((url: string): boolean => {
+    try {
+      const parsedUrl = new URL(url);
+      return (
+        (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') &&
+        /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(parsedUrl.pathname)
+      );
+    } catch {
+      return false;
+    }
+  }, []);
+
   const isValid = useCallback((): boolean => {
     return (
       formData.name.length >= 2 &&
-      /^(https?:\/\/).+\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(formData.logoUrl) &&
+      isValidImageUrl(formData.logoUrl) &&
       ReactPlayer.canPlay(formData.streamUrl)
     )
-  }, [formData])
+  }, [formData, isValidImageUrl])
 
   const handleSubmit = useCallback((): void => {
     if (editStream && onEdit) {
@@ -55,7 +67,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
     if (!pastedText) return
 
     // Check if it's an image URL
-    if (/^(https?:\/\/).+\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(pastedText)) {
+    if (isValidImageUrl(pastedText)) {
       setFormData(prev => ({ ...prev, logoUrl: pastedText }))
       setLogoPreview(pastedText)
       return
@@ -66,7 +78,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
       setFormData(prev => ({ ...prev, streamUrl: pastedText }))
       setStreamPreview(pastedText)
     }
-  }, [])
+  }, [isValidImageUrl])
 
   const handleKeyDown = useCallback((e: KeyboardEvent): void => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && isValid()) {
@@ -83,7 +95,9 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
           logoUrl: editStream.logoUrl,
           streamUrl: editStream.streamUrl
         })
-        setLogoPreview(editStream.logoUrl)
+        if (isValidImageUrl(editStream.logoUrl)) {
+          setLogoPreview(editStream.logoUrl)
+        }
         setStreamPreview(editStream.streamUrl)
       } else {
         setFormData({ name: '', logoUrl: '', streamUrl: '' })
@@ -91,7 +105,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
         setStreamPreview('')
       }
     }
-  }, [open, editStream])
+  }, [open, editStream, isValidImageUrl])
 
   return (
     <Dialog
@@ -133,12 +147,12 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
               onChange={(e) => {
                 const url = e.target.value
                 setFormData(prev => ({ ...prev, logoUrl: url }))
-                if (/^(https?:\/\/).+\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(url)) {
+                if (isValidImageUrl(url)) {
                   setLogoPreview(url)
                 }
               }}
-              error={formData.logoUrl.length > 0 && !/^(https?:\/\/).+\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(formData.logoUrl)}
-              helperText={formData.logoUrl.length > 0 && !/^(https?:\/\/).+\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(formData.logoUrl) ? 'Invalid image URL' : ' '}
+              error={formData.logoUrl.length > 0 && !isValidImageUrl(formData.logoUrl)}
+              helperText={formData.logoUrl.length > 0 && !isValidImageUrl(formData.logoUrl) ? 'Invalid image URL' : ' '}
               onPaste={handlePaste}
             />
             {logoPreview && (
@@ -163,6 +177,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
                     maxHeight: '100%',
                     objectFit: 'contain'
                   }}
+                  referrerPolicy="no-referrer"
                 />
               </Paper>
             )}
