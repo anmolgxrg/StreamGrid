@@ -49,7 +49,25 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
     onClose()
   }, [editStream, onEdit, onAdd, formData, onClose])
 
-  // Handle keyboard shortcuts
+  // Handle URL auto-detection on paste
+  const handlePaste = useCallback((e: React.ClipboardEvent): void => {
+    const pastedText = e.clipboardData?.getData('text')
+    if (!pastedText) return
+
+    // Check if it's an image URL
+    if (/^(https?:\/\/).+\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(pastedText)) {
+      setFormData(prev => ({ ...prev, logoUrl: pastedText }))
+      setLogoPreview(pastedText)
+      return
+    }
+
+    // Check if it's a playable stream URL
+    if (ReactPlayer.canPlay(pastedText)) {
+      setFormData(prev => ({ ...prev, streamUrl: pastedText }))
+      setStreamPreview(pastedText)
+    }
+  }, [])
+
   const handleKeyDown = useCallback((e: KeyboardEvent): void => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && isValid()) {
       handleSubmit()
@@ -121,6 +139,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
               }}
               error={formData.logoUrl.length > 0 && !/^(https?:\/\/).+\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(formData.logoUrl)}
               helperText={formData.logoUrl.length > 0 && !/^(https?:\/\/).+\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(formData.logoUrl) ? 'Invalid image URL' : ' '}
+              onPaste={handlePaste}
             />
             {logoPreview && (
               <Paper
@@ -163,6 +182,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
               }}
               error={formData.streamUrl.length > 0 && !ReactPlayer.canPlay(formData.streamUrl)}
               helperText={formData.streamUrl.length > 0 && !ReactPlayer.canPlay(formData.streamUrl) ? 'Invalid stream URL' : ' '}
+              onPaste={handlePaste}
             />
             {streamPreview && (
               <Paper
