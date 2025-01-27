@@ -7,6 +7,8 @@
 
 StreamGrid revolutionizes multi-stream viewing by giving you complete freedom over your layout. Want a massive main stream surrounded by smaller feeds? Or five equally-sized streams? Or any other arrangement you can imagine? StreamGrid makes it possible. Built with Electron, React, and TypeScript, it's the perfect solution for watching multiple streams exactly the way you want.
 
+https://github.com/user-attachments/assets/1e098512-ed39-4094-ab13-84c144e60f7c
+
 ## ✨ Features
 
 - **Ultimate Layout Flexibility**:
