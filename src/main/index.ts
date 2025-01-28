@@ -3,6 +3,39 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.svg?asset'
+import https from 'https'
+
+// Function to fetch latest GitHub release version
+async function getLatestGitHubVersion(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'api.github.com',
+      path: '/repos/LordKnish/StreamGrid/releases/latest',
+      headers: {
+        'User-Agent': 'StreamGrid'
+      }
+    }
+
+    https
+      .get(options, (res) => {
+        let data = ''
+        res.on('data', (chunk) => {
+          data += chunk
+        })
+        res.on('end', () => {
+          try {
+            const release = JSON.parse(data)
+            resolve(release.tag_name.replace('v', ''))
+          } catch (err) {
+            reject(err)
+          }
+        })
+      })
+      .on('error', (err) => {
+        reject(err)
+      })
+  })
+}
 
 // Configure autoUpdater
 autoUpdater.autoDownload = false
@@ -154,6 +187,16 @@ app.whenReady().then(() => {
   ipcMain.on('ping', () => console.log('pong'))
   ipcMain.on('get-app-version', (event) => {
     event.returnValue = app.getVersion()
+  })
+
+  // Add handler for getting latest GitHub version
+  ipcMain.handle('get-github-version', async () => {
+    try {
+      return await getLatestGitHubVersion()
+    } catch (error) {
+      console.error('Error fetching GitHub version:', error)
+      return null
+    }
   })
 
   createWindow()

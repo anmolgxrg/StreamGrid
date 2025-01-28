@@ -85,7 +85,9 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
   // Handle URL auto-detection on paste
   const handlePaste = useCallback((e: React.ClipboardEvent): void => {
     const pastedText = e.clipboardData?.getData('text')
-    if (!pastedText) return
+    if (!pastedText) {
+      return
+    }
 
     // Check if it's an image URL
     if (isValidImageUrl(pastedText)) {

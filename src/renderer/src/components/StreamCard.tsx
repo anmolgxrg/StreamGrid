@@ -48,8 +48,8 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit }
 
   // Update logoUrl when stream.logoUrl changes
   useEffect(() => {
-    setLogoUrl(stream.logoUrl);
-  }, [stream.logoUrl]);
+    setLogoUrl(stream.logoUrl)
+  }, [stream.logoUrl])
 
   const handlePlay = useCallback((): void => {
     console.log('Attempting to play stream:', stream.streamUrl)
@@ -243,15 +243,15 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit }
               loading="lazy"
               referrerPolicy="no-referrer"
               onError={(e: React.SyntheticEvent<HTMLImageElement, Event>): void => {
-                const img = e.currentTarget;
+                const img = e.currentTarget
                 if (!img.hasAttribute('crossOrigin')) {
                   // If first attempt failed, try with CORS
-                  img.setAttribute('crossOrigin', 'anonymous');
-                  img.src = logoUrl;
+                  img.setAttribute('crossOrigin', 'anonymous')
+                  img.src = logoUrl
                 } else {
                   // If CORS attempt also failed, clear the image
-                  img.removeAttribute('src');
-                  console.error('Failed to load logo:', logoUrl);
+                  img.removeAttribute('src')
+                  console.error('Failed to load logo:', logoUrl)
                 }
               }}
             />

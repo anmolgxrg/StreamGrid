@@ -3,7 +3,8 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 const api = {
-  version: ipcRenderer.sendSync('get-app-version')
+  version: ipcRenderer.sendSync('get-app-version'),
+  getGitHubVersion: (): Promise<string | null> => ipcRenderer.invoke('get-github-version')
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

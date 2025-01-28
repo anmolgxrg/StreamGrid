@@ -18,6 +18,7 @@ import { AddStreamDialog } from './components/AddStreamDialog'
 import { useStreamStore } from './store/useStreamStore'
 import { Stream, StreamFormData } from './types/stream'
 import { LoadingScreen } from './components/LoadingScreen'
+import { UpdateAlert } from './components/UpdateAlert'
 
 export const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
@@ -100,6 +101,7 @@ export const App: React.FC = () => {
 
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <UpdateAlert />
       <AppBar position="static" elevation={0}>
         <Toolbar sx={{ backgroundColor: 'background.paper' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>

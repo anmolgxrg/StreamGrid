@@ -5,6 +5,7 @@ declare global {
     electron: ElectronAPI
     api: {
       version: string
+      getGitHubVersion: () => Promise<string | null>
     }
   }
 }
