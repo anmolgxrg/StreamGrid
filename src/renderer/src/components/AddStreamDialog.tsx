@@ -35,14 +35,35 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
   const isValidImageUrl = useCallback((url: string): boolean => {
     try {
       const parsedUrl = new URL(url);
-      return (
-        (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') &&
-        /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(parsedUrl.pathname)
-      );
+      return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
     } catch {
       return false;
     }
   }, []);
+
+  const validateAndLoadImage = useCallback((url: string): Promise<boolean> => {
+    return new Promise<boolean>((resolve: (value: boolean) => void) => {
+      const img = new Image();
+      img.onload = (): void => resolve(true);
+      img.onerror = (): void => {
+        // If loading fails, try with CORS
+        img.crossOrigin = 'anonymous';
+        img.src = url;
+        img.onerror = (): void => resolve(false);
+      };
+      // Try loading without CORS first
+      img.src = url;
+    });
+  }, []);
+
+  const trySetLogoPreview = useCallback(async (url: string): Promise<void> => {
+    if (isValidImageUrl(url)) {
+      const isValidImage = await validateAndLoadImage(url);
+      if (isValidImage) {
+        setLogoPreview(url);
+      }
+    }
+  }, [isValidImageUrl, validateAndLoadImage]);
 
   const isValid = useCallback((): boolean => {
     return (
@@ -69,7 +90,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
     // Check if it's an image URL
     if (isValidImageUrl(pastedText)) {
       setFormData(prev => ({ ...prev, logoUrl: pastedText }))
-      setLogoPreview(pastedText)
+      trySetLogoPreview(pastedText)
       return
     }
 
@@ -78,7 +99,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
       setFormData(prev => ({ ...prev, streamUrl: pastedText }))
       setStreamPreview(pastedText)
     }
-  }, [isValidImageUrl])
+  }, [isValidImageUrl, trySetLogoPreview])
 
   const handleKeyDown = useCallback((e: KeyboardEvent): void => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && isValid()) {
@@ -95,8 +116,8 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
           logoUrl: editStream.logoUrl,
           streamUrl: editStream.streamUrl
         })
-        if (isValidImageUrl(editStream.logoUrl)) {
-          setLogoPreview(editStream.logoUrl)
+        if (editStream.logoUrl) {
+          trySetLogoPreview(editStream.logoUrl)
         }
         setStreamPreview(editStream.streamUrl)
       } else {
@@ -105,7 +126,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
         setStreamPreview('')
       }
     }
-  }, [open, editStream, isValidImageUrl])
+  }, [open, editStream, trySetLogoPreview])
 
   return (
     <Dialog
@@ -147,9 +168,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
               onChange={(e) => {
                 const url = e.target.value
                 setFormData(prev => ({ ...prev, logoUrl: url }))
-                if (isValidImageUrl(url)) {
-                  setLogoPreview(url)
-                }
+                trySetLogoPreview(url)
               }}
               error={formData.logoUrl.length > 0 && !isValidImageUrl(formData.logoUrl)}
               helperText={formData.logoUrl.length > 0 && !isValidImageUrl(formData.logoUrl) ? 'Invalid image URL' : ' '}
@@ -178,6 +197,12 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
                     objectFit: 'contain'
                   }}
                   referrerPolicy="no-referrer"
+                  loading="lazy"
+                  crossOrigin="anonymous"
+                  onError={(e: React.SyntheticEvent<HTMLImageElement, Event>): void => {
+                    e.currentTarget.src = '';
+                    setLogoPreview('');
+                  }}
                 />
               </Paper>
             )}

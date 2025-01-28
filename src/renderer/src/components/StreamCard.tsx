@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useRef, memo, lazy, Suspense } from 'react'
+import React, { useState, useCallback, useRef, memo, lazy, Suspense, useEffect } from 'react'
 import PropTypes from 'prop-types'
-import { Card, CardMedia, IconButton, Typography, Box, CircularProgress } from '@mui/material'
+import { Card, IconButton, Typography, Box, CircularProgress } from '@mui/material'
 import { PlayArrow, Stop, Close, Edit } from '@mui/icons-material'
 import { Stream } from '../types/stream'
 import { StreamErrorBoundary } from './StreamErrorBoundary'
@@ -43,7 +43,13 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit }
   const [isPlaying, setIsPlaying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [logoUrl, setLogoUrl] = useState<string>('')
   const errorTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Update logoUrl when stream.logoUrl changes
+  useEffect(() => {
+    setLogoUrl(stream.logoUrl);
+  }, [stream.logoUrl]);
 
   const handlePlay = useCallback((): void => {
     console.log('Attempting to play stream:', stream.streamUrl)
@@ -216,17 +222,40 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit }
           }}
           onClick={handlePlay}
         >
-          <CardMedia
-            component="img"
-            image={stream.logoUrl}
-            alt={stream.name}
+          <Box
             sx={{
               width: '100%',
               height: '100%',
-              objectFit: 'contain',
-              backgroundColor: '#000'
+              backgroundColor: '#000',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
-          />
+          >
+            <img
+              src={logoUrl}
+              alt={stream.name}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain'
+              }}
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              onError={(e: React.SyntheticEvent<HTMLImageElement, Event>): void => {
+                const img = e.currentTarget;
+                if (!img.hasAttribute('crossOrigin')) {
+                  // If first attempt failed, try with CORS
+                  img.setAttribute('crossOrigin', 'anonymous');
+                  img.src = logoUrl;
+                } else {
+                  // If CORS attempt also failed, clear the image
+                  img.removeAttribute('src');
+                  console.error('Failed to load logo:', logoUrl);
+                }
+              }}
+            />
+          </Box>
           <Box
             className="play-overlay"
             sx={{
