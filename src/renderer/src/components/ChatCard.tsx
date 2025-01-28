@@ -17,7 +17,7 @@ const ChatCard: React.FC<ChatCardProps> = memo(
       if (streamType === 'YouTube') {
         return `https://www.youtube.com/live_chat?v=${streamIdentifier}&embed_domain=${window.location.hostname}&dark_theme=1`
       } else if (streamType === 'Twitch') {
-        return `https://www.twitch.tv/embed/${streamIdentifier}/chat?parent=dev.twitch.tv&darkpopout`
+        return `https://www.twitch.tv/embed/${streamIdentifier}/chat?parent=localhost&darkpopout`
       }
       return ''
     }
