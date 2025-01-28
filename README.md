@@ -27,7 +27,15 @@ https://github.com/user-attachments/assets/1e098512-ed39-4094-ab13-84c144e60f7c
   - Persistent layout saving
   - Export and Import your stream setups to share with friends
 - **Responsive Design**: Automatically adjusts to window size while maintaining video aspect ratios
-- **HLS Support**: Compatible with HTTP Live Streaming (HLS) video sources
+- **Stream Platform Support**:
+  - **YouTube**: Support for standard videos, live streams, and shorts
+  - **Twitch**: Support for channel live streams
+  - **HLS Support**: Compatible with HTTP Live Streaming (HLS) video sources
+  - **MPEG-DASH Support**: Compatible with Dynamic Adaptive Streaming over HTTP (DASH) video sources
+- **Chat Integration**:
+  - YouTube chat for live streams and videos
+  - Twitch chat for live streams
+  - Draggable and resizable chat windows
 - **Cross-Platform**: Available for Windows, macOS, and Linux
 
 ## 🚀 Getting Started
@@ -36,7 +44,7 @@ https://github.com/user-attachments/assets/1e098512-ed39-4094-ab13-84c144e60f7c
 
 - Node.js 18.x or higher
 - npm 9.x or higher
-  
+
 ### Option 1: Install from Releases
 
 1. Visit the [Releases](https://github.com/LordKnish/StreamGrid/releases) section of the repository.
@@ -93,9 +101,12 @@ npm run build:linux
   - [TypeScript](https://www.typescriptlang.org/)
   - [Material-UI](https://mui.com/)
 - **State Management**: [Zustand](https://github.com/pmndrs/zustand)
-- **Video Playback**:
-  - [HLS.js](https://github.com/video-dev/hls.js/)
-  - [React Player](https://github.com/cookpete/react-player)
+- **Video Playback & Streaming**:
+  - [React Player](https://github.com/cookpete/react-player) - Multi-platform video support
+  - [HLS.js](https://github.com/video-dev/hls.js/) - HLS streaming support
+  - [dash.js](https://github.com/Dash-Industry-Forum/dash.js) - MPEG-DASH streaming support
+  - YouTube Player API integration
+  - Twitch Player API integration
 - **Layout**: [React Grid Layout](https://github.com/react-grid-layout/react-grid-layout)
 - **Form Handling**: [React Hook Form](https://react-hook-form.com/)
 
