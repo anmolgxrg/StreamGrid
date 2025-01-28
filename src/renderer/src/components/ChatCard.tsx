@@ -32,6 +32,7 @@ const ChatCard: React.FC<ChatCardProps> = memo(
           position: 'relative',
           bgcolor: 'background.paper',
           borderRadius: 2,
+          userSelect: 'none',
           overflow: 'hidden'
         }}
       >

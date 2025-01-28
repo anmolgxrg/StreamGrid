@@ -145,6 +145,7 @@ export const StreamGrid = React.memo(({
         height: '100vh',
         backgroundColor: 'background.default',
         overflow: 'hidden',
+        userSelect: 'none',
         position: 'relative',
         '& .react-grid-layout': {
           height: '100% !important',

@@ -132,6 +132,7 @@ export const App: React.FC = () => {
                 width: '32px',
                 height: '32px',
                 display: 'flex',
+                userSelect: 'none',
                 alignItems: 'center',
                 cursor: 'pointer',
                 '& img': {

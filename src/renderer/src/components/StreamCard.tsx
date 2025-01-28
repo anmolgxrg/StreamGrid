@@ -262,7 +262,8 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
         position: 'relative',
         bgcolor: 'background.paper',
         borderRadius: 2,
-        overflow: 'hidden'
+        overflow: 'hidden',
+        userSelect: 'none'
       }}
     >
       <Box
