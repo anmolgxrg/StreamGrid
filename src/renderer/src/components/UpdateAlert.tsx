@@ -8,7 +8,7 @@ export const UpdateAlert: React.FC = () => {
   const currentVersion = window.api.version
 
   // Set to true to always show the update alert for testing
-  const TESTING_MODE = true
+  const TESTING_MODE = false
 
   useEffect(() => {
     const checkVersion = async (): Promise<void> => {
