@@ -1,25 +1,87 @@
-import React, { useState, useCallback, useRef, memo, lazy, Suspense, useEffect, useMemo } from 'react'
+import React, {
+  useState,
+  useCallback,
+  useRef,
+  memo,
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo
+} from 'react'
 import PropTypes from 'prop-types'
 import { Card, IconButton, Typography, Box, CircularProgress } from '@mui/material'
-import { PlayArrow, Stop, Close, Edit } from '@mui/icons-material'
+import { PlayArrow, Stop, Close, Edit, Chat } from '@mui/icons-material'
 import { Stream } from '../types/stream'
 import { StreamErrorBoundary } from './StreamErrorBoundary'
+import { useStreamStore } from '../store/useStreamStore'
 
 // Lazy load ReactPlayer for better initial load time
 const ReactPlayer = lazy(() => import('react-player'))
 
 // Helper function to detect stream type
-const detectStreamType = (url: string): 'hls' | 'dash' | 'other' => {
+const extractYoutubeVideoId = (url: string): string | null => {
+  try {
+    const url_obj = new URL(url)
+    if (url_obj.hostname.includes('youtube.com')) {
+      // Handle youtube.com URLs
+      if (url_obj.pathname === '/watch') {
+        return url_obj.searchParams.get('v')
+      } else if (url_obj.pathname.startsWith('/live/')) {
+        return url_obj.pathname.split('/')[2]
+      } else if (url_obj.pathname.startsWith('/embed/')) {
+        return url_obj.pathname.split('/')[2]
+      }
+    } else if (url_obj.hostname === 'youtu.be') {
+      // Handle youtu.be URLs
+      return url_obj.pathname.slice(1)
+    }
+  } catch (error) {
+    console.error('Error parsing URL:', error)
+  }
+  return null
+}
+
+const detectStreamType = (url: string): 'hls' | 'dash' | 'youtube' | 'twitch' | 'other' => {
   const hlsPatterns = [/\.m3u8(\?.*)?$/i]
   const dashPatterns = [/\.mpd(\?.*)?$/i, /manifest\.mpd/i]
+  const youtubePatterns = [
+    // Standard YouTube watch URLs
+    /^(https?:\/\/)?(www\.)?youtube\.com\/watch\?v=[a-zA-Z0-9_-]+/i,
+    // Short YouTube URLs
+    /^(https?:\/\/)?youtu\.be\/[a-zA-Z0-9_-]+/i,
+    // YouTube live URLs
+    /^(https?:\/\/)?(www\.)?youtube\.com\/@[^/]+\/live/i,
+    /^(https?:\/\/)?(www\.)?youtube\.com\/live\/[a-zA-Z0-9_-]+/i,
+    // YouTube embed URLs
+    /^(https?:\/\/)?(www\.)?youtube\.com\/embed\/[a-zA-Z0-9_-]+/i
+  ]
+  const twitchPatterns = [
+    // Twitch channel URLs
+    /^(https?:\/\/)?(www\.)?twitch\.tv\/([a-zA-Z0-9_]{4,25})/i
+  ]
 
-  if (hlsPatterns.some(pattern => pattern.test(url))) {
+  if (hlsPatterns.some((pattern) => pattern.test(url))) {
     return 'hls'
   }
-  if (dashPatterns.some(pattern => pattern.test(url))) {
+  if (dashPatterns.some((pattern) => pattern.test(url))) {
     return 'dash'
   }
+  if (youtubePatterns.some((pattern) => pattern.test(url))) {
+    return 'youtube'
+  }
+  if (twitchPatterns.some((pattern) => pattern.test(url))) {
+    return 'twitch'
+  }
   return 'other'
+}
+
+const extractTwitchChannelName = (url: string): string | null => {
+  try {
+    const match = url.match(/^(?:https?:\/\/)?(?:www\.)?twitch\.tv\/([a-zA-Z0-9_]{4,25})/i)
+    return match ? match[1] : null
+  } catch {
+    return null
+  }
 }
 
 // Base player config
@@ -74,35 +136,73 @@ interface StreamCardProps {
   stream: Stream
   onRemove: (id: string) => void
   onEdit: (stream: Stream) => void
+  onAddChat?: (videoId: string, streamId: string, streamName: string) => void
 }
 
-const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit }) => {
+const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, onAddChat }) => {
+  const { removeChatsForStream } = useStreamStore()
   const [isPlaying, setIsPlaying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [logoUrl, setLogoUrl] = useState<string>('')
   const errorTimerRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Clean up URL and determine player config
+  const { videoId, channelName, playerConfig, cleanUrl, streamType } = useMemo(() => {
+    const type = detectStreamType(stream.streamUrl)
+    console.log(`Stream type detected for ${stream.name}:`, type)
+
+    let vid: string | null = null
+    let channel: string | null = null
+    let url = stream.streamUrl
+    let config = {}
+
+    if (type === 'youtube') {
+      vid = extractYoutubeVideoId(stream.streamUrl)
+      // Construct clean YouTube URL
+      url = vid ? `https://www.youtube.com/watch?v=${vid}` : stream.streamUrl
+      config = {} // For YouTube, pass URL directly without config
+    } else if (type === 'twitch') {
+      channel = extractTwitchChannelName(stream.streamUrl)
+      url = channel ? `https://www.twitch.tv/${channel}` : stream.streamUrl
+      config = {} // For Twitch, pass URL directly without config
+    } else if (type === 'dash') {
+      config = { file: DASH_CONFIG }
+    } else {
+      config = { file: HLS_CONFIG }
+    }
+
+    return {
+      videoId: vid,
+      channelName: channel,
+      playerConfig: config,
+      cleanUrl: url,
+      streamType: type
+    }
+  }, [stream.streamUrl, stream.name])
+
   // Update logoUrl when stream.logoUrl changes
   useEffect(() => {
     setLogoUrl(stream.logoUrl)
   }, [stream.logoUrl])
 
-  // Determine player config based on stream type
-  const playerConfig = useMemo(() => {
-    const streamType = detectStreamType(stream.streamUrl)
-    console.log(`Stream type detected for ${stream.name}:`, streamType)
-
-    return {
-      file: streamType === 'dash' ? DASH_CONFIG : HLS_CONFIG
-    }
-  }, [stream.streamUrl, stream.name])
-
   const handlePlay = useCallback((): void => {
-    console.log('Attempting to play stream:', stream.streamUrl)
-    setIsPlaying(true)
-    setIsLoading(true)
-  }, [stream.streamUrl])
+    // Reset state before playing
+    setIsPlaying(false)
+    setError(null)
+    setIsLoading(false)
+    if (errorTimerRef.current) {
+      clearTimeout(errorTimerRef.current)
+      errorTimerRef.current = null
+    }
+
+    // Start playing in next tick
+    setTimeout(() => {
+      console.log('Attempting to play stream:', cleanUrl)
+      setIsPlaying(true)
+      setIsLoading(true)
+    }, 0)
+  }, [cleanUrl])
 
   const handleStop = useCallback((): void => {
     setIsPlaying(false)
@@ -111,10 +211,11 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit }
       clearTimeout(errorTimerRef.current)
       errorTimerRef.current = null
     }
-  }, [])
+    removeChatsForStream(stream.id)
+  }, [stream.id, removeChatsForStream])
 
   const handleReady = useCallback(() => {
-    console.log('Stream ready:', stream.streamUrl)
+    console.log('Stream ready:', cleanUrl)
     setIsLoading(false)
     setError(null)
     // Clear any pending error timer when stream recovers
@@ -122,10 +223,10 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit }
       clearTimeout(errorTimerRef.current)
       errorTimerRef.current = null
     }
-  }, [stream.streamUrl])
+  }, [cleanUrl])
 
   const handleError = useCallback(() => {
-    console.error('Stream connection issue:', stream.streamUrl)
+    console.error('Stream connection issue:', cleanUrl)
     setIsLoading(true)
 
     // Clear any existing timer
@@ -135,12 +236,12 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit }
 
     // Set new timer for 15 seconds
     errorTimerRef.current = setTimeout(() => {
-      console.error('Stream failed to recover:', stream.streamUrl)
+      console.error('Stream failed to recover:', cleanUrl)
       setError('Failed to load stream')
       setIsLoading(false)
       errorTimerRef.current = null
     }, 15000)
-  }, [stream.streamUrl])
+  }, [cleanUrl])
 
   // Cleanup timer on unmount
   React.useEffect(() => {
@@ -161,7 +262,8 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit }
         position: 'relative',
         bgcolor: 'background.paper',
         borderRadius: 2,
-        overflow: 'hidden'
+        overflow: 'hidden',
+        userSelect: 'none'
       }}
     >
       <Box
@@ -178,43 +280,64 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit }
         <Typography
           variant="subtitle2"
           noWrap
+          className="drag-handle"
           sx={{
             color: 'white',
             minWidth: 0,
-            mr: 1
-          }}
-        >
-          {stream.name}
-        </Typography>
-        <Box
-          className="drag-handle"
-          sx={{
-            flex: 1,
-            height: '100%',
+            mr: 1,
             cursor: 'move',
+            flex: 1,
             '&:hover': {
               bgcolor: 'rgba(255,255,255,0.1)'
             }
           }}
-        />
+        >
+          {stream.name}
+        </Typography>
 
         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
           {isPlaying && (
-            <IconButton
-              onClick={handleStop}
-              sx={{
-                backgroundColor: 'rgba(0,0,0,0.4)',
-                color: 'white',
-                '&:hover': {
-                  backgroundColor: 'rgba(0,0,0,0.6)',
-                  color: 'error.main'
-                },
-                padding: '4px'
-              }}
-              size="small"
-            >
-              <Stop fontSize="small" />
-            </IconButton>
+            <>
+              <IconButton
+                onClick={handleStop}
+                sx={{
+                  backgroundColor: 'rgba(0,0,0,0.4)',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0,0,0,0.6)',
+                    color: 'error.main'
+                  },
+                  padding: '4px'
+                }}
+                size="small"
+              >
+                <Stop fontSize="small" />
+              </IconButton>
+              {(videoId || channelName) && onAddChat && (
+                <IconButton
+                  onClick={() => {
+                    if (streamType === 'youtube' && videoId) {
+                      onAddChat(videoId, stream.id, stream.name)
+                    } else if (streamType === 'twitch' && channelName) {
+                      onAddChat(channelName, stream.id, stream.name)
+                    }
+                  }}
+                  sx={{
+                    backgroundColor: 'rgba(0,0,0,0.4)',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0,0,0,0.6)',
+                      color: 'primary.main'
+                    },
+                    padding: '4px',
+                    ml: 0.5
+                  }}
+                  size="small"
+                >
+                  <Chat fontSize="small" />
+                </IconButton>
+              )}
+            </>
           )}
           <IconButton
             onClick={(e) => {
@@ -355,7 +478,8 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit }
                 }
               >
                 <ReactPlayer
-                  url={stream.streamUrl}
+                  key={cleanUrl} // Use clean URL as key
+                  url={cleanUrl}
                   width="100%"
                   height="100%"
                   playing={true}
@@ -432,7 +556,8 @@ StreamCard.propTypes = {
     logoUrl: PropTypes.string.isRequired
   }).isRequired,
   onRemove: PropTypes.func.isRequired,
-  onEdit: PropTypes.func.isRequired
+  onEdit: PropTypes.func.isRequired,
+  onAddChat: PropTypes.func
 }
 
 export { StreamCard }

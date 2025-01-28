@@ -8,6 +8,8 @@ import 'react-resizable/css/styles.css'
 import { Box } from '@mui/material'
 import { Stream, GridItem } from '../types/stream'
 import { StreamCard } from './StreamCard'
+import { ChatCard } from './ChatCard'
+import { useStreamStore } from '../store/useStreamStore'
 
 // Move calculateMargins outside component to prevent recreation
 const calculateMargins = (): {
@@ -35,12 +37,24 @@ const ASPECT_RATIO = 16 / 9 // Standard video aspect ratio
 interface StreamGridProps {
   streams: Stream[]
   layout: GridItem[]
+  chats: { id: string; streamId: string; streamType: string; streamName: string; streamIdentifier: string }[]
   onRemoveStream: (id: string) => void
   onLayoutChange: (layout: GridItem[]) => void
   onEditStream: (stream: Stream) => void
+  onAddChat: (streamIdentifier: string, streamId: string, streamName: string) => void
+  onRemoveChat: (id: string) => void
 }
 
-export const StreamGrid = React.memo(({ streams, layout, onRemoveStream, onLayoutChange, onEditStream }: StreamGridProps): JSX.Element => {
+export const StreamGrid = React.memo(({
+  streams,
+  layout,
+  chats,
+  onRemoveStream,
+  onLayoutChange,
+  onEditStream,
+  onAddChat,
+  onRemoveChat
+}: StreamGridProps): JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 1200, rowHeight: 100 })
   const resizeTimeoutRef = useRef<number>()
@@ -83,17 +97,45 @@ export const StreamGrid = React.memo(({ streams, layout, onRemoveStream, onLayou
     }
   }, [updateDimensions, debouncedUpdateDimensions])
 
-  const handleLayoutChange = useCallback((newLayout: GridItem[]): void => {
-    onLayoutChange(newLayout)
-  }, [onLayoutChange])
+  const setLastDraggedId = useStreamStore(state => state.setLastDraggedId)
 
-  const memoizedStreams = useMemo(() => (
-    streams.map(stream => (
-      <div key={stream.id}>
-        <StreamCard stream={stream} onRemove={onRemoveStream} onEdit={onEditStream} />
+  const handleLayoutChange = useCallback((newLayout: GridItem[]): void => {
+    // Find which item was moved by comparing positions
+    const movedItem = newLayout.find((item, index) => {
+      const oldItem = layout[index]
+      return oldItem && item.i === oldItem.i && (item.x !== oldItem.x || item.y !== oldItem.y)
+    })
+    if (movedItem) {
+      setLastDraggedId(movedItem.i)
+    }
+    onLayoutChange(newLayout)
+  }, [onLayoutChange, layout, setLastDraggedId])
+
+  const lastDraggedId = useStreamStore(state => state.lastDraggedId)
+
+  const memoizedContent = useMemo(() => ([
+    ...streams.map(stream => (
+      <div key={stream.id} style={{ zIndex: lastDraggedId === stream.id ? 1000 : 1 }}>
+        <StreamCard
+          stream={stream}
+          onRemove={onRemoveStream}
+          onEdit={onEditStream}
+          onAddChat={onAddChat}
+        />
+      </div>
+    )),
+    ...chats.map(chat => (
+      <div key={chat.id} style={{ zIndex: lastDraggedId === chat.id ? 1000 : 1 }}>
+        <ChatCard
+          id={chat.id}
+          streamType={chat.streamType}
+          streamName={chat.streamName}
+          streamIdentifier={chat.streamIdentifier}
+          onRemove={onRemoveChat}
+        />
       </div>
     ))
-  ), [streams, onRemoveStream, onEditStream])
+  ]), [streams, chats, onRemoveStream, onEditStream, onAddChat, onRemoveChat, lastDraggedId])
 
   return (
     <Box
@@ -103,9 +145,23 @@ export const StreamGrid = React.memo(({ streams, layout, onRemoveStream, onLayou
         height: '100vh',
         backgroundColor: 'background.default',
         overflow: 'hidden',
+        userSelect: 'none',
         position: 'relative',
         '& .react-grid-layout': {
-          height: '100% !important'
+          height: '100% !important',
+          '& > .react-grid-item': {
+            transition: 'transform 200ms ease !important',
+            '&.react-draggable-dragging': {
+              zIndex: 1000,
+              '& > div': {
+                pointerEvents: 'none'
+              }
+            },
+            '& > div': {
+              height: '100%',
+              transition: 'none'
+            }
+          }
         },
         '& .react-resizable-handle': {
           width: '20px',
@@ -139,7 +195,7 @@ export const StreamGrid = React.memo(({ streams, layout, onRemoveStream, onLayou
         allowOverlap={true}
         maxRows={12}
       >
-        {memoizedStreams}
+        {memoizedContent}
       </GridLayout>
     </Box>
   )

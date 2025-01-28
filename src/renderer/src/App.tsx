@@ -25,8 +25,19 @@ export const App: React.FC = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
   const [aboutAnchorEl, setAboutAnchorEl] = useState<null | HTMLElement>(null)
-  const { streams, layout, addStream, removeStream, updateLayout, importStreams, updateStream } =
-    useStreamStore()
+  const {
+    streams,
+    layout,
+    chats,
+    addStream,
+    removeStream,
+    updateLayout,
+    importStreams,
+    updateStream,
+    addChat,
+    removeChat,
+    removeChatsForStream
+  } = useStreamStore()
   const [editingStream, setEditingStream] = useState<Stream | undefined>(undefined)
 
   useEffect((): (() => void) => {
@@ -45,9 +56,19 @@ export const App: React.FC = () => {
   const handleAddStream = (data: StreamFormData): void => {
     const newStream: Stream = {
       id: uuidv4(),
-      ...data
+      ...data,
+      isLivestream:
+        data.streamUrl.includes('twitch.tv') ||
+        data.streamUrl.includes('youtube.com/live') ||
+        data.streamUrl.includes('youtube.com/@') ||
+        data.streamUrl.includes('youtu.be/live')
     }
     addStream(newStream)
+  }
+
+  const handleRemoveStream = (id: string): void => {
+    removeChatsForStream(id)
+    removeStream(id)
   }
 
   const handleEditStream = (stream: Stream): void => {
@@ -111,6 +132,7 @@ export const App: React.FC = () => {
                 width: '32px',
                 height: '32px',
                 display: 'flex',
+                userSelect: 'none',
                 alignItems: 'center',
                 cursor: 'pointer',
                 '& img': {
@@ -221,9 +243,12 @@ export const App: React.FC = () => {
         <StreamGrid
           streams={streams}
           layout={layout}
-          onRemoveStream={removeStream}
+          chats={chats}
+          onRemoveStream={handleRemoveStream}
           onLayoutChange={updateLayout}
           onEditStream={handleEditStream}
+          onAddChat={addChat}
+          onRemoveChat={removeChat}
         />
       </Box>
 

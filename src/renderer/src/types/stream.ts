@@ -7,6 +7,8 @@ export interface Stream {
     x: number
     y: number
   }
+  chatId?: string // ID for associated chat window
+  isLivestream?: boolean // Flag to indicate if it's a livestream
 }
 
 export interface StreamFormData {

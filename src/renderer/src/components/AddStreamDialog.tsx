@@ -26,11 +26,67 @@ interface AddStreamDialogProps {
 export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose, onAdd, onEdit, editStream }): JSX.Element => {
   const [logoPreview, setLogoPreview] = useState<string>('')
   const [streamPreview, setStreamPreview] = useState<string>('')
+  const [streamType, setStreamType] = useState<string>('')
   const [formData, setFormData] = useState<StreamFormData>({
     name: '',
     logoUrl: '',
     streamUrl: ''
   })
+
+  const extractStreamInfo = useCallback((url: string): { type: string; id: string | null } => {
+    try {
+      // YouTube detection
+      let match = url.match(/^(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^?/\s]{11})/i)
+      if (match) return { type: 'YouTube', id: match[1] }
+
+      match = url.match(/^(?:https?:\/\/)?(?:www\.)?youtube\.com\/(?:watch\?v=|live\/|embed\/)?([^?/\s]{11})/i)
+      if (match) return { type: 'YouTube', id: match[1] }
+
+      const urlObj = new URL(url)
+      const videoId = urlObj.searchParams.get('v')
+      if (videoId && videoId.length === 11) return { type: 'YouTube', id: videoId }
+
+      // Twitch detection
+      match = url.match(/^(?:https?:\/\/)?(?:www\.)?twitch\.tv\/([a-zA-Z0-9_]{4,25})/i)
+      if (match) return { type: 'Twitch', id: match[1] }
+
+      return { type: '', id: null }
+    } catch {
+      return { type: '', id: null }
+    }
+  }, [])
+
+  const fetchYouTubeTitle = useCallback(async (videoId: string): Promise<string | null> => {
+    try {
+      const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+      if (!response.ok) return null
+      const data = await response.json()
+      return data.title || null
+    } catch {
+      return null
+    }
+  }, [])
+
+  const detectStreamType = useCallback((url: string): string => {
+    if (!url) return '';
+    try {
+      const { type } = extractStreamInfo(url);
+      if (type) return type;
+
+      const urlObj = new URL(url);
+      const path = urlObj.pathname.toLowerCase();
+      if (path.endsWith('.m3u8')) return 'HLS';
+      if (path.endsWith('.mpd')) return 'DASH';
+      // Check for common streaming patterns
+      if (url.includes('manifest') || url.includes('playlist')) {
+        if (url.includes('m3u8')) return 'HLS';
+        if (url.includes('mpd')) return 'DASH';
+      }
+      return 'Direct Stream';
+    } catch {
+      return '';
+    }
+  }, [extractStreamInfo]);
 
   const isValidImageUrl = useCallback((url: string): boolean => {
     try {
@@ -83,25 +139,70 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
   }, [editStream, onEdit, onAdd, formData, onClose])
 
   // Handle URL auto-detection on paste
-  const handlePaste = useCallback((e: React.ClipboardEvent): void => {
+  const handlePaste = useCallback(async (e: React.ClipboardEvent): Promise<void> => {
     const pastedText = e.clipboardData?.getData('text')
     if (!pastedText) {
       return
     }
 
-    // Check if it's an image URL
-    if (isValidImageUrl(pastedText)) {
+    // Prevent default paste behavior
+    e.preventDefault()
+
+    // Only handle paste in the field where the paste event occurred
+    const targetId = (e.target as HTMLElement).id
+    if (targetId === 'logo-url' && isValidImageUrl(pastedText)) {
       setFormData(prev => ({ ...prev, logoUrl: pastedText }))
       trySetLogoPreview(pastedText)
-      return
-    }
+    } else if (targetId === 'stream-url' && ReactPlayer.canPlay(pastedText)) {
+      // Clear any existing value first
+      setFormData(prev => ({ ...prev, streamUrl: '' }))
+      setStreamPreview('')
 
-    // Check if it's a playable stream URL
-    if (ReactPlayer.canPlay(pastedText)) {
-      setFormData(prev => ({ ...prev, streamUrl: pastedText }))
-      setStreamPreview(pastedText)
+      // Clean up URL and set new value
+      const streamType = detectStreamType(pastedText)
+      let cleanUrl = pastedText
+
+      if (streamType === 'YouTube' || streamType === 'Twitch') {
+        const { type, id } = extractStreamInfo(pastedText)
+        if (id) {
+          cleanUrl = type === 'YouTube'
+            ? `https://www.youtube.com/watch?v=${id}`
+            : `https://www.twitch.tv/${id}`
+        }
+      }
+
+      setFormData(prev => ({ ...prev, streamUrl: cleanUrl }))
+      setStreamPreview(cleanUrl)
+      setStreamType(streamType)
+
+      // Only auto-populate when adding a new stream
+      if (!editStream) {
+        const { type, id } = extractStreamInfo(cleanUrl)
+        if (id) {
+          if (type === 'YouTube') {
+            // Set YouTube thumbnail and title
+            const thumbnailUrl = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
+            setFormData(prev => ({ ...prev, logoUrl: thumbnailUrl }))
+            trySetLogoPreview(thumbnailUrl)
+
+            fetchYouTubeTitle(id).then(title => {
+              if (title) {
+                setFormData(prev => ({ ...prev, name: title }))
+              }
+            })
+          } else if (type === 'Twitch') {
+            // Set Twitch channel name as title and live preview image
+            setFormData(prev => ({
+              ...prev,
+              name: id,
+              logoUrl: `https://static-cdn.jtvnw.net/previews-ttv/live_user_${id}-1920x1080.jpg`
+            }))
+            trySetLogoPreview(`https://static-cdn.jtvnw.net/previews-ttv/live_user_${id}-1920x1080.jpg`)
+          }
+        }
+      }
     }
-  }, [isValidImageUrl, trySetLogoPreview])
+  }, [isValidImageUrl, trySetLogoPreview, detectStreamType, editStream, fetchYouTubeTitle])
 
   const handleKeyDown = useCallback((e: KeyboardEvent): void => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && isValid()) {
@@ -113,22 +214,37 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
   useEffect(() => {
     if (open) {
       if (editStream) {
+        // Clean up stream URL before setting form data
+        const type = detectStreamType(editStream.streamUrl)
+        let cleanUrl = editStream.streamUrl
+
+        if (type === 'YouTube' || type === 'Twitch') {
+          const { type: streamType, id } = extractStreamInfo(editStream.streamUrl)
+          if (id) {
+            cleanUrl = streamType === 'YouTube'
+              ? `https://www.youtube.com/watch?v=${id}`
+              : `https://www.twitch.tv/${id}`
+          }
+        }
+
         setFormData({
           name: editStream.name,
           logoUrl: editStream.logoUrl,
-          streamUrl: editStream.streamUrl
+          streamUrl: cleanUrl
         })
         if (editStream.logoUrl) {
           trySetLogoPreview(editStream.logoUrl)
         }
-        setStreamPreview(editStream.streamUrl)
+        setStreamPreview(cleanUrl)
+        setStreamType(type)
       } else {
         setFormData({ name: '', logoUrl: '', streamUrl: '' })
         setLogoPreview('')
         setStreamPreview('')
+        setStreamType('')
       }
     }
-  }, [open, editStream, trySetLogoPreview])
+  }, [open, editStream, trySetLogoPreview, detectStreamType, extractStreamInfo])
 
   return (
     <Dialog
@@ -164,6 +280,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
 
           <Box>
             <TextField
+              id="logo-url"
               label="Logo URL"
               fullWidth
               value={formData.logoUrl}
@@ -212,18 +329,70 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
 
           <Box>
             <TextField
+              id="stream-url"
               label="Stream URL"
               fullWidth
               value={formData.streamUrl}
               onChange={(e) => {
                 const url = e.target.value
-                setFormData(prev => ({ ...prev, streamUrl: url }))
-                if (ReactPlayer.canPlay(url)) {
-                  setStreamPreview(url)
+                const streamType = detectStreamType(url)
+                let cleanUrl = url
+
+                if (streamType === 'YouTube' || streamType === 'Twitch') {
+                  const { type: streamType, id } = extractStreamInfo(url)
+                  if (id) {
+                    cleanUrl = streamType === 'YouTube'
+                      ? `https://www.youtube.com/watch?v=${id}`
+                      : `https://www.twitch.tv/${id}`
+                  }
+                }
+
+                setFormData(prev => ({ ...prev, streamUrl: cleanUrl }))
+                if (ReactPlayer.canPlay(cleanUrl)) {
+                  setStreamPreview(cleanUrl)
+                  setStreamType(streamType)
+
+                  // Only auto-populate when adding a new stream
+                  if (!editStream) {
+                    const { type: streamType, id } = extractStreamInfo(cleanUrl)
+                    if (id) {
+                      if (streamType === 'YouTube') {
+                        // Set YouTube thumbnail and title
+                        const thumbnailUrl = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
+                        setFormData(prev => ({ ...prev, logoUrl: thumbnailUrl }))
+                        trySetLogoPreview(thumbnailUrl)
+
+                        fetchYouTubeTitle(id).then(title => {
+                          if (title) {
+                            setFormData(prev => ({ ...prev, name: title }))
+                          }
+                        })
+                      } else if (streamType === 'Twitch') {
+                        // Set Twitch channel name as title and live preview image
+                        setFormData(prev => ({
+                          ...prev,
+                          name: id,
+                          logoUrl: `https://static-cdn.jtvnw.net/previews-ttv/live_user_${id}-1920x1080.jpg`
+                        }))
+                        trySetLogoPreview(`https://static-cdn.jtvnw.net/previews-ttv/live_user_${id}-1920x1080.jpg`)
+                      }
+                    }
+                  }
+                } else {
+                  setStreamPreview('')
+                  setStreamType('')
                 }
               }}
               error={formData.streamUrl.length > 0 && !ReactPlayer.canPlay(formData.streamUrl)}
-              helperText={formData.streamUrl.length > 0 && !ReactPlayer.canPlay(formData.streamUrl) ? 'Invalid stream URL' : ' '}
+              helperText={
+                formData.streamUrl.length > 0
+                  ? !ReactPlayer.canPlay(formData.streamUrl)
+                    ? 'Invalid stream URL'
+                    : streamType
+                      ? `Stream Type: ${streamType}`
+                      : ' '
+                  : ' '
+              }
               onPaste={handlePaste}
             />
             {streamPreview && (
