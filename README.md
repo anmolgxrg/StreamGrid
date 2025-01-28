@@ -58,7 +58,7 @@ https://github.com/user-attachments/assets/1e098512-ed39-4094-ab13-84c144e60f7c
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/streamgrid.git
+git clone https://github.com/LordKnish/streamgrid.git
 cd streamgrid
 ```
 
