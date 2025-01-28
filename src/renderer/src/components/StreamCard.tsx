@@ -244,25 +244,20 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
         <Typography
           variant="subtitle2"
           noWrap
+          className="drag-handle"
           sx={{
             color: 'white',
             minWidth: 0,
-            mr: 1
-          }}
-        >
-          {stream.name}
-        </Typography>
-        <Box
-          className="drag-handle"
-          sx={{
-            flex: 1,
-            height: '100%',
+            mr: 1,
             cursor: 'move',
+            flex: 1,
             '&:hover': {
               bgcolor: 'rgba(255,255,255,0.1)'
             }
           }}
-        />
+        >
+          {stream.name}
+        </Typography>
 
         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
           {isPlaying && (

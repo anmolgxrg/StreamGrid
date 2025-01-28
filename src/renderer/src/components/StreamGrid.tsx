@@ -9,6 +9,7 @@ import { Box } from '@mui/material'
 import { Stream, GridItem } from '../types/stream'
 import { StreamCard } from './StreamCard'
 import { ChatCard } from './ChatCard'
+import { useStreamStore } from '../store/useStreamStore'
 
 // Move calculateMargins outside component to prevent recreation
 const calculateMargins = (): {
@@ -96,13 +97,25 @@ export const StreamGrid = React.memo(({
     }
   }, [updateDimensions, debouncedUpdateDimensions])
 
+  const setLastDraggedId = useStreamStore(state => state.setLastDraggedId)
+
   const handleLayoutChange = useCallback((newLayout: GridItem[]): void => {
+    // Find which item was moved by comparing positions
+    const movedItem = newLayout.find((item, index) => {
+      const oldItem = layout[index]
+      return oldItem && item.i === oldItem.i && (item.x !== oldItem.x || item.y !== oldItem.y)
+    })
+    if (movedItem) {
+      setLastDraggedId(movedItem.i)
+    }
     onLayoutChange(newLayout)
-  }, [onLayoutChange])
+  }, [onLayoutChange, layout, setLastDraggedId])
+
+  const lastDraggedId = useStreamStore(state => state.lastDraggedId)
 
   const memoizedContent = useMemo(() => ([
     ...streams.map(stream => (
-      <div key={stream.id}>
+      <div key={stream.id} style={{ zIndex: lastDraggedId === stream.id ? 1000 : 1 }}>
         <StreamCard
           stream={stream}
           onRemove={onRemoveStream}
@@ -112,7 +125,7 @@ export const StreamGrid = React.memo(({
       </div>
     )),
     ...chats.map(chat => (
-      <div key={chat.id}>
+      <div key={chat.id} style={{ zIndex: lastDraggedId === chat.id ? 1000 : 1 }}>
         <ChatCard
           id={chat.id}
           videoId={chat.videoId}
@@ -121,7 +134,7 @@ export const StreamGrid = React.memo(({
         />
       </div>
     ))
-  ]), [streams, chats, onRemoveStream, onEditStream, onAddChat, onRemoveChat])
+  ]), [streams, chats, onRemoveStream, onEditStream, onAddChat, onRemoveChat, lastDraggedId])
 
   return (
     <Box
@@ -133,7 +146,20 @@ export const StreamGrid = React.memo(({
         overflow: 'hidden',
         position: 'relative',
         '& .react-grid-layout': {
-          height: '100% !important'
+          height: '100% !important',
+          '& > .react-grid-item': {
+            transition: 'transform 200ms ease !important',
+            '&.react-draggable-dragging': {
+              zIndex: 1000,
+              '& > div': {
+                pointerEvents: 'none'
+              }
+            },
+            '& > div': {
+              height: '100%',
+              transition: 'none'
+            }
+          }
         },
         '& .react-resizable-handle': {
           width: '20px',

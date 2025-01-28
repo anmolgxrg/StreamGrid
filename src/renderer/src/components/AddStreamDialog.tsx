@@ -35,7 +35,6 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
 
   const extractYouTubeVideoId = useCallback((url: string): string | null => {
     try {
-      // Handle youtu.be URLs
       let match = url.match(/^(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^?/\s]{11})/i)
       if (match) return match[1]
 

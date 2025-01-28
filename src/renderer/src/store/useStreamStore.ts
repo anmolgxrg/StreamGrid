@@ -7,6 +7,8 @@ interface StreamStore {
   streams: Stream[]
   layout: GridItem[]
   chats: { id: string; videoId: string; streamId: string; streamName: string }[]
+  lastDraggedId: string | null
+  setLastDraggedId: (id: string | null) => void
   addStream: (stream: Stream) => void
   removeStream: (id: string) => void
   updateStream: (id: string, updates: Partial<Stream>) => void
@@ -19,10 +21,16 @@ interface StreamStore {
   removeChatsForStream: (streamId: string) => void
 }
 
-const createInitialState = (): { streams: Stream[]; layout: GridItem[]; chats: { id: string; videoId: string; streamId: string; streamName: string }[] } => ({
+const createInitialState = (): {
+  streams: Stream[]
+  layout: GridItem[]
+  chats: { id: string; videoId: string; streamId: string; streamName: string }[]
+  lastDraggedId: string | null
+} => ({
   streams: [],
   layout: [],
-  chats: []
+  chats: [],
+  lastDraggedId: null
 })
 
 export const useStreamStore = create<StreamStore>()(
@@ -94,7 +102,11 @@ export const useStreamStore = create<StreamStore>()(
             'UPDATE_STREAM'
           ),
 
-        updateLayout: (newLayout): void => set({ layout: newLayout }, false, 'UPDATE_LAYOUT'),
+        setLastDraggedId: (id): void => set({ lastDraggedId: id }, false, 'SET_LAST_DRAGGED_ID'),
+
+        updateLayout: (newLayout): void => {
+          set({ layout: newLayout }, false, 'UPDATE_LAYOUT')
+        },
 
         importStreams: (data): { success: boolean; error?: string } => {
           const validation = validateImportData(data)

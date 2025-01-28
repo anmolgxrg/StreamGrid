@@ -38,25 +38,20 @@ const ChatCard: React.FC<ChatCardProps> = memo(({ id, videoId, streamName, onRem
         <Typography
           variant="subtitle2"
           noWrap
+          className="drag-handle"
           sx={{
             color: 'white',
             minWidth: 0,
-            mr: 1
-          }}
-        >
-          {streamName} - Live Chat
-        </Typography>
-        <Box
-          className="drag-handle"
-          sx={{
-            flex: 1,
-            height: '100%',
+            mr: 1,
             cursor: 'move',
+            flex: 1,
             '&:hover': {
               bgcolor: 'rgba(255,255,255,0.1)'
             }
           }}
-        />
+        >
+          {streamName} - Live Chat
+        </Typography>
         <IconButton
           onClick={() => onRemove(id)}
           sx={{
