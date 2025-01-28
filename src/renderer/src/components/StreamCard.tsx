@@ -9,15 +9,28 @@ import { StreamErrorBoundary } from './StreamErrorBoundary'
 const ReactPlayer = lazy(() => import('react-player'))
 
 // Helper function to detect stream type
-const detectStreamType = (url: string): 'hls' | 'dash' | 'other' => {
+const detectStreamType = (url: string): 'hls' | 'dash' | 'youtube' | 'other' => {
   const hlsPatterns = [/\.m3u8(\?.*)?$/i]
   const dashPatterns = [/\.mpd(\?.*)?$/i, /manifest\.mpd/i]
+  const youtubePatterns = [
+    // Standard YouTube watch URLs
+    /^(https?:\/\/)?(www\.)?youtube\.com\/watch\?v=[a-zA-Z0-9_-]+/i,
+    // Short YouTube URLs
+    /^(https?:\/\/)?youtu\.be\/[a-zA-Z0-9_-]+/i,
+    // YouTube live URLs
+    /^(https?:\/\/)?(www\.)?youtube\.com\/live\/[a-zA-Z0-9_-]+/i,
+    // YouTube embed URLs
+    /^(https?:\/\/)?(www\.)?youtube\.com\/embed\/[a-zA-Z0-9_-]+/i
+  ]
 
   if (hlsPatterns.some(pattern => pattern.test(url))) {
     return 'hls'
   }
   if (dashPatterns.some(pattern => pattern.test(url))) {
     return 'dash'
+  }
+  if (youtubePatterns.some(pattern => pattern.test(url))) {
+    return 'youtube'
   }
   return 'other'
 }
@@ -70,6 +83,7 @@ const DASH_CONFIG = {
   }
 }
 
+
 interface StreamCardProps {
   stream: Stream
   onRemove: (id: string) => void
@@ -93,8 +107,12 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit }
     const streamType = detectStreamType(stream.streamUrl)
     console.log(`Stream type detected for ${stream.name}:`, streamType)
 
-    return {
-      file: streamType === 'dash' ? DASH_CONFIG : HLS_CONFIG
+    if (streamType === 'youtube') {
+      return {} // For YouTube, pass URL directly without config
+    } else if (streamType === 'dash') {
+      return { file: DASH_CONFIG }
+    } else {
+      return { file: HLS_CONFIG }
     }
   }, [stream.streamUrl, stream.name])
 

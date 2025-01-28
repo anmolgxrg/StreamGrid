@@ -33,9 +33,46 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
     streamUrl: ''
   })
 
+  const extractYouTubeVideoId = useCallback((url: string): string | null => {
+    try {
+      // Handle youtu.be URLs
+      let match = url.match(/^(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^?/\s]{11})/i)
+      if (match) return match[1]
+
+      // Handle youtube.com URLs
+      match = url.match(/^(?:https?:\/\/)?(?:www\.)?youtube\.com\/(?:watch\?v=|live\/|embed\/)?([^?/\s]{11})/i)
+      if (match) return match[1]
+
+      // Handle URLs with v= parameter
+      const urlObj = new URL(url)
+      const videoId = urlObj.searchParams.get('v')
+      if (videoId && videoId.length === 11) return videoId
+
+      return null
+    } catch {
+      return null
+    }
+  }, [])
+
+  const fetchYouTubeTitle = useCallback(async (videoId: string): Promise<string | null> => {
+    try {
+      const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+      if (!response.ok) return null
+      const data = await response.json()
+      return data.title || null
+    } catch {
+      return null
+    }
+  }, [])
+
   const detectStreamType = useCallback((url: string): string => {
     if (!url) return '';
     try {
+      // Check for YouTube URLs first
+      if (extractYouTubeVideoId(url)) {
+        return 'YouTube';
+      }
+
       const urlObj = new URL(url);
       const path = urlObj.pathname.toLowerCase();
       if (path.endsWith('.m3u8')) return 'HLS';
@@ -102,26 +139,41 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
   }, [editStream, onEdit, onAdd, formData, onClose])
 
   // Handle URL auto-detection on paste
-  const handlePaste = useCallback((e: React.ClipboardEvent): void => {
+  const handlePaste = useCallback(async (e: React.ClipboardEvent): Promise<void> => {
     const pastedText = e.clipboardData?.getData('text')
     if (!pastedText) {
       return
     }
 
-    // Check if it's an image URL
-    if (isValidImageUrl(pastedText)) {
+    // Only handle paste in the field where the paste event occurred
+    const targetId = (e.target as HTMLElement).id
+    if (targetId === 'logo-url' && isValidImageUrl(pastedText)) {
       setFormData(prev => ({ ...prev, logoUrl: pastedText }))
       trySetLogoPreview(pastedText)
-      return
-    }
-
-    // Check if it's a playable stream URL
-    if (ReactPlayer.canPlay(pastedText)) {
+    } else if (targetId === 'stream-url' && ReactPlayer.canPlay(pastedText)) {
       setFormData(prev => ({ ...prev, streamUrl: pastedText }))
       setStreamPreview(pastedText)
-      setStreamType(detectStreamType(pastedText))
+      const streamType = detectStreamType(pastedText)
+      setStreamType(streamType)
+
+      // Only auto-populate when adding a new stream
+      if (!editStream && streamType === 'YouTube') {
+        const videoId = extractYouTubeVideoId(pastedText)
+        if (videoId) {
+          // Set thumbnail
+          const thumbnailUrl = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+          setFormData(prev => ({ ...prev, logoUrl: thumbnailUrl }))
+          trySetLogoPreview(thumbnailUrl)
+
+          // Set title
+          const title = await fetchYouTubeTitle(videoId)
+          if (title) {
+            setFormData(prev => ({ ...prev, name: title }))
+          }
+        }
+      }
     }
-  }, [isValidImageUrl, trySetLogoPreview, detectStreamType])
+  }, [isValidImageUrl, trySetLogoPreview, detectStreamType, editStream, fetchYouTubeTitle])
 
   const handleKeyDown = useCallback((e: KeyboardEvent): void => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && isValid()) {
@@ -186,6 +238,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
 
           <Box>
             <TextField
+              id="logo-url"
               label="Logo URL"
               fullWidth
               value={formData.logoUrl}
@@ -234,15 +287,34 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
 
           <Box>
             <TextField
+              id="stream-url"
               label="Stream URL"
               fullWidth
               value={formData.streamUrl}
-              onChange={(e) => {
+              onChange={async (e) => {
                 const url = e.target.value
                 setFormData(prev => ({ ...prev, streamUrl: url }))
                 if (ReactPlayer.canPlay(url)) {
                   setStreamPreview(url)
-                  setStreamType(detectStreamType(url))
+                  const streamType = detectStreamType(url)
+                  setStreamType(streamType)
+
+                  // Only auto-populate when adding a new stream
+                  if (!editStream && streamType === 'YouTube') {
+                    const videoId = extractYouTubeVideoId(url)
+                    if (videoId) {
+                      // Set thumbnail
+                      const thumbnailUrl = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+                      setFormData(prev => ({ ...prev, logoUrl: thumbnailUrl }))
+                      trySetLogoPreview(thumbnailUrl)
+
+                      // Set title
+                      const title = await fetchYouTubeTitle(videoId)
+                      if (title) {
+                        setFormData(prev => ({ ...prev, name: title }))
+                      }
+                    }
+                  }
                 } else {
                   setStreamType('')
                 }
