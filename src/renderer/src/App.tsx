@@ -25,8 +25,19 @@ export const App: React.FC = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
   const [aboutAnchorEl, setAboutAnchorEl] = useState<null | HTMLElement>(null)
-  const { streams, layout, addStream, removeStream, updateLayout, importStreams, updateStream } =
-    useStreamStore()
+  const {
+    streams,
+    layout,
+    chats,
+    addStream,
+    removeStream,
+    updateLayout,
+    importStreams,
+    updateStream,
+    addChat,
+    removeChat,
+    removeChatsForStream
+  } = useStreamStore()
   const [editingStream, setEditingStream] = useState<Stream | undefined>(undefined)
 
   useEffect((): (() => void) => {
@@ -48,6 +59,11 @@ export const App: React.FC = () => {
       ...data
     }
     addStream(newStream)
+  }
+
+  const handleRemoveStream = (id: string): void => {
+    removeChatsForStream(id)
+    removeStream(id)
   }
 
   const handleEditStream = (stream: Stream): void => {
@@ -221,9 +237,12 @@ export const App: React.FC = () => {
         <StreamGrid
           streams={streams}
           layout={layout}
-          onRemoveStream={removeStream}
+          chats={chats}
+          onRemoveStream={handleRemoveStream}
           onLayoutChange={updateLayout}
           onEditStream={handleEditStream}
+          onAddChat={addChat}
+          onRemoveChat={removeChat}
         />
       </Box>
 

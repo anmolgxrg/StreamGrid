@@ -145,20 +145,37 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
       return
     }
 
+    // Prevent default paste behavior
+    e.preventDefault()
+
     // Only handle paste in the field where the paste event occurred
     const targetId = (e.target as HTMLElement).id
     if (targetId === 'logo-url' && isValidImageUrl(pastedText)) {
       setFormData(prev => ({ ...prev, logoUrl: pastedText }))
       trySetLogoPreview(pastedText)
     } else if (targetId === 'stream-url' && ReactPlayer.canPlay(pastedText)) {
-      setFormData(prev => ({ ...prev, streamUrl: pastedText }))
-      setStreamPreview(pastedText)
+      // Clear any existing value first
+      setFormData(prev => ({ ...prev, streamUrl: '' }))
+      setStreamPreview('')
+
+      // Clean up URL and set new value
       const streamType = detectStreamType(pastedText)
+      let cleanUrl = pastedText
+
+      if (streamType === 'YouTube') {
+        const videoId = extractYouTubeVideoId(pastedText)
+        if (videoId) {
+          cleanUrl = `https://www.youtube.com/watch?v=${videoId}`
+        }
+      }
+
+      setFormData(prev => ({ ...prev, streamUrl: cleanUrl }))
+      setStreamPreview(cleanUrl)
       setStreamType(streamType)
 
       // Only auto-populate when adding a new stream
       if (!editStream && streamType === 'YouTube') {
-        const videoId = extractYouTubeVideoId(pastedText)
+        const videoId = extractYouTubeVideoId(cleanUrl)
         if (videoId) {
           // Set thumbnail
           const thumbnailUrl = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
@@ -166,10 +183,11 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
           trySetLogoPreview(thumbnailUrl)
 
           // Set title
-          const title = await fetchYouTubeTitle(videoId)
-          if (title) {
-            setFormData(prev => ({ ...prev, name: title }))
-          }
+          fetchYouTubeTitle(videoId).then(title => {
+            if (title) {
+              setFormData(prev => ({ ...prev, name: title }))
+            }
+          })
         }
       }
     }
@@ -185,16 +203,27 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
   useEffect(() => {
     if (open) {
       if (editStream) {
+        // Clean up stream URL before setting form data
+        const type = detectStreamType(editStream.streamUrl)
+        let cleanUrl = editStream.streamUrl
+
+        if (type === 'YouTube') {
+          const videoId = extractYouTubeVideoId(editStream.streamUrl)
+          if (videoId) {
+            cleanUrl = `https://www.youtube.com/watch?v=${videoId}`
+          }
+        }
+
         setFormData({
           name: editStream.name,
           logoUrl: editStream.logoUrl,
-          streamUrl: editStream.streamUrl
+          streamUrl: cleanUrl
         })
         if (editStream.logoUrl) {
           trySetLogoPreview(editStream.logoUrl)
         }
-        setStreamPreview(editStream.streamUrl)
-        setStreamType(detectStreamType(editStream.streamUrl))
+        setStreamPreview(cleanUrl)
+        setStreamType(type)
       } else {
         setFormData({ name: '', logoUrl: '', streamUrl: '' })
         setLogoPreview('')
@@ -202,7 +231,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
         setStreamType('')
       }
     }
-  }, [open, editStream, trySetLogoPreview, detectStreamType])
+  }, [open, editStream, trySetLogoPreview, detectStreamType, extractYouTubeVideoId])
 
   return (
     <Dialog
@@ -291,17 +320,26 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
               label="Stream URL"
               fullWidth
               value={formData.streamUrl}
-              onChange={async (e) => {
+              onChange={(e) => {
                 const url = e.target.value
-                setFormData(prev => ({ ...prev, streamUrl: url }))
-                if (ReactPlayer.canPlay(url)) {
-                  setStreamPreview(url)
-                  const streamType = detectStreamType(url)
+                const streamType = detectStreamType(url)
+                let cleanUrl = url
+
+                if (streamType === 'YouTube') {
+                  const videoId = extractYouTubeVideoId(url)
+                  if (videoId) {
+                    cleanUrl = `https://www.youtube.com/watch?v=${videoId}`
+                  }
+                }
+
+                setFormData(prev => ({ ...prev, streamUrl: cleanUrl }))
+                if (ReactPlayer.canPlay(cleanUrl)) {
+                  setStreamPreview(cleanUrl)
                   setStreamType(streamType)
 
                   // Only auto-populate when adding a new stream
                   if (!editStream && streamType === 'YouTube') {
-                    const videoId = extractYouTubeVideoId(url)
+                    const videoId = extractYouTubeVideoId(cleanUrl)
                     if (videoId) {
                       // Set thumbnail
                       const thumbnailUrl = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
@@ -309,13 +347,15 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
                       trySetLogoPreview(thumbnailUrl)
 
                       // Set title
-                      const title = await fetchYouTubeTitle(videoId)
-                      if (title) {
-                        setFormData(prev => ({ ...prev, name: title }))
-                      }
+                      fetchYouTubeTitle(videoId).then(title => {
+                        if (title) {
+                          setFormData(prev => ({ ...prev, name: title }))
+                        }
+                      })
                     }
                   }
                 } else {
+                  setStreamPreview('')
                   setStreamType('')
                 }
               }}

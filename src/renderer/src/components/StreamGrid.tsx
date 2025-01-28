@@ -8,6 +8,7 @@ import 'react-resizable/css/styles.css'
 import { Box } from '@mui/material'
 import { Stream, GridItem } from '../types/stream'
 import { StreamCard } from './StreamCard'
+import { ChatCard } from './ChatCard'
 
 // Move calculateMargins outside component to prevent recreation
 const calculateMargins = (): {
@@ -35,12 +36,24 @@ const ASPECT_RATIO = 16 / 9 // Standard video aspect ratio
 interface StreamGridProps {
   streams: Stream[]
   layout: GridItem[]
+  chats: { id: string; videoId: string; streamId: string; streamName: string }[]
   onRemoveStream: (id: string) => void
   onLayoutChange: (layout: GridItem[]) => void
   onEditStream: (stream: Stream) => void
+  onAddChat: (videoId: string, streamId: string, streamName: string) => void
+  onRemoveChat: (id: string) => void
 }
 
-export const StreamGrid = React.memo(({ streams, layout, onRemoveStream, onLayoutChange, onEditStream }: StreamGridProps): JSX.Element => {
+export const StreamGrid = React.memo(({
+  streams,
+  layout,
+  chats,
+  onRemoveStream,
+  onLayoutChange,
+  onEditStream,
+  onAddChat,
+  onRemoveChat
+}: StreamGridProps): JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 1200, rowHeight: 100 })
   const resizeTimeoutRef = useRef<number>()
@@ -87,13 +100,28 @@ export const StreamGrid = React.memo(({ streams, layout, onRemoveStream, onLayou
     onLayoutChange(newLayout)
   }, [onLayoutChange])
 
-  const memoizedStreams = useMemo(() => (
-    streams.map(stream => (
+  const memoizedContent = useMemo(() => ([
+    ...streams.map(stream => (
       <div key={stream.id}>
-        <StreamCard stream={stream} onRemove={onRemoveStream} onEdit={onEditStream} />
+        <StreamCard
+          stream={stream}
+          onRemove={onRemoveStream}
+          onEdit={onEditStream}
+          onAddChat={onAddChat}
+        />
+      </div>
+    )),
+    ...chats.map(chat => (
+      <div key={chat.id}>
+        <ChatCard
+          id={chat.id}
+          videoId={chat.videoId}
+          streamName={chat.streamName}
+          onRemove={onRemoveChat}
+        />
       </div>
     ))
-  ), [streams, onRemoveStream, onEditStream])
+  ]), [streams, chats, onRemoveStream, onEditStream, onAddChat, onRemoveChat])
 
   return (
     <Box
@@ -139,7 +167,7 @@ export const StreamGrid = React.memo(({ streams, layout, onRemoveStream, onLayou
         allowOverlap={true}
         maxRows={12}
       >
-        {memoizedStreams}
+        {memoizedContent}
       </GridLayout>
     </Box>
   )
