@@ -26,11 +26,30 @@ interface AddStreamDialogProps {
 export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose, onAdd, onEdit, editStream }): JSX.Element => {
   const [logoPreview, setLogoPreview] = useState<string>('')
   const [streamPreview, setStreamPreview] = useState<string>('')
+  const [streamType, setStreamType] = useState<string>('')
   const [formData, setFormData] = useState<StreamFormData>({
     name: '',
     logoUrl: '',
     streamUrl: ''
   })
+
+  const detectStreamType = useCallback((url: string): string => {
+    if (!url) return '';
+    try {
+      const urlObj = new URL(url);
+      const path = urlObj.pathname.toLowerCase();
+      if (path.endsWith('.m3u8')) return 'HLS';
+      if (path.endsWith('.mpd')) return 'DASH';
+      // Check for common streaming patterns
+      if (url.includes('manifest') || url.includes('playlist')) {
+        if (url.includes('m3u8')) return 'HLS';
+        if (url.includes('mpd')) return 'DASH';
+      }
+      return 'Direct Stream';
+    } catch {
+      return '';
+    }
+  }, []);
 
   const isValidImageUrl = useCallback((url: string): boolean => {
     try {
@@ -100,8 +119,9 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
     if (ReactPlayer.canPlay(pastedText)) {
       setFormData(prev => ({ ...prev, streamUrl: pastedText }))
       setStreamPreview(pastedText)
+      setStreamType(detectStreamType(pastedText))
     }
-  }, [isValidImageUrl, trySetLogoPreview])
+  }, [isValidImageUrl, trySetLogoPreview, detectStreamType])
 
   const handleKeyDown = useCallback((e: KeyboardEvent): void => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && isValid()) {
@@ -122,13 +142,15 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
           trySetLogoPreview(editStream.logoUrl)
         }
         setStreamPreview(editStream.streamUrl)
+        setStreamType(detectStreamType(editStream.streamUrl))
       } else {
         setFormData({ name: '', logoUrl: '', streamUrl: '' })
         setLogoPreview('')
         setStreamPreview('')
+        setStreamType('')
       }
     }
-  }, [open, editStream, trySetLogoPreview])
+  }, [open, editStream, trySetLogoPreview, detectStreamType])
 
   return (
     <Dialog
@@ -220,10 +242,21 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
                 setFormData(prev => ({ ...prev, streamUrl: url }))
                 if (ReactPlayer.canPlay(url)) {
                   setStreamPreview(url)
+                  setStreamType(detectStreamType(url))
+                } else {
+                  setStreamType('')
                 }
               }}
               error={formData.streamUrl.length > 0 && !ReactPlayer.canPlay(formData.streamUrl)}
-              helperText={formData.streamUrl.length > 0 && !ReactPlayer.canPlay(formData.streamUrl) ? 'Invalid stream URL' : ' '}
+              helperText={
+                formData.streamUrl.length > 0
+                  ? !ReactPlayer.canPlay(formData.streamUrl)
+                    ? 'Invalid stream URL'
+                    : streamType
+                      ? `Stream Type: ${streamType}`
+                      : ' '
+                  : ' '
+              }
               onPaste={handlePaste}
             />
             {streamPreview && (
