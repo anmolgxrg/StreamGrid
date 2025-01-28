@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, memo, lazy, Suspense, useEffect } from 'react'
+import React, { useState, useCallback, useRef, memo, lazy, Suspense, useEffect, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import { Card, IconButton, Typography, Box, CircularProgress } from '@mui/material'
 import { PlayArrow, Stop, Close, Edit } from '@mui/icons-material'
@@ -8,27 +8,64 @@ import { StreamErrorBoundary } from './StreamErrorBoundary'
 // Lazy load ReactPlayer for better initial load time
 const ReactPlayer = lazy(() => import('react-player'))
 
-// Move player config outside component to prevent recreation
-const PLAYER_CONFIG = {
-  file: {
-    attributes: {
-      crossOrigin: 'anonymous'
+// Helper function to detect stream type
+const detectStreamType = (url: string): 'hls' | 'dash' | 'other' => {
+  const hlsPatterns = [/\.m3u8(\?.*)?$/i]
+  const dashPatterns = [/\.mpd(\?.*)?$/i, /manifest\.mpd/i]
+
+  if (hlsPatterns.some(pattern => pattern.test(url))) {
+    return 'hls'
+  }
+  if (dashPatterns.some(pattern => pattern.test(url))) {
+    return 'dash'
+  }
+  return 'other'
+}
+
+// Base player config
+const BASE_CONFIG = {
+  attributes: {
+    crossOrigin: 'anonymous'
+  }
+}
+
+// HLS specific config
+const HLS_CONFIG = {
+  ...BASE_CONFIG,
+  forceHLS: true,
+  hlsVersion: '1.4.12',
+  hlsOptions: {
+    enableWorker: false,
+    lowLatencyMode: true,
+    backBufferLength: 90,
+    liveDurationInfinity: true,
+    debug: false,
+    xhrSetup: (xhr: XMLHttpRequest): void => {
+      xhr.withCredentials = false
     },
-    forceHLS: true,
-    hlsVersion: '1.4.12',
-    hlsOptions: {
-      enableWorker: false,
-      lowLatencyMode: true,
-      backBufferLength: 90,
-      liveDurationInfinity: true,
-      debug: false,
-      xhrSetup: (xhr: XMLHttpRequest): void => {
-        xhr.withCredentials = false
+    manifestLoadingTimeOut: 10000,
+    manifestLoadingMaxRetry: 3,
+    levelLoadingTimeOut: 10000,
+    levelLoadingMaxRetry: 3
+  }
+}
+
+// DASH specific config
+const DASH_CONFIG = {
+  ...BASE_CONFIG,
+  forceDASH: true,
+  dashVersion: '4.7.2', // Current version of dashjs
+  dashOptions: {
+    lowLatencyMode: true,
+    streaming: {
+      lowLatencyEnabled: true,
+      abr: {
+        useDefaultABRRules: true
       },
-      manifestLoadingTimeOut: 10000,
-      manifestLoadingMaxRetry: 3,
-      levelLoadingTimeOut: 10000,
-      levelLoadingMaxRetry: 3
+      liveCatchup: {
+        enabled: true,
+        maxDrift: 12
+      }
     }
   }
 }
@@ -50,6 +87,16 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit }
   useEffect(() => {
     setLogoUrl(stream.logoUrl)
   }, [stream.logoUrl])
+
+  // Determine player config based on stream type
+  const playerConfig = useMemo(() => {
+    const streamType = detectStreamType(stream.streamUrl)
+    console.log(`Stream type detected for ${stream.name}:`, streamType)
+
+    return {
+      file: streamType === 'dash' ? DASH_CONFIG : HLS_CONFIG
+    }
+  }, [stream.streamUrl, stream.name])
 
   const handlePlay = useCallback((): void => {
     console.log('Attempting to play stream:', stream.streamUrl)
@@ -315,7 +362,7 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit }
                   controls={true}
                   onReady={handleReady}
                   onError={handleError}
-                  config={PLAYER_CONFIG}
+                  config={playerConfig}
                   playsinline
                   stopOnUnmount
                   pip={false}
