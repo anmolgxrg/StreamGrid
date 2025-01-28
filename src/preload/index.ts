@@ -1,10 +1,11 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, shell } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 const api = {
   version: ipcRenderer.sendSync('get-app-version'),
-  getGitHubVersion: (): Promise<string | null> => ipcRenderer.invoke('get-github-version')
+  getGitHubVersion: (): Promise<string | null> => ipcRenderer.invoke('get-github-version'),
+  openExternal: (url: string): Promise<void> => shell.openExternal(url)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

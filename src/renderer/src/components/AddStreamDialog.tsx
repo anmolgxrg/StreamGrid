@@ -33,23 +33,26 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
     streamUrl: ''
   })
 
-  const extractYouTubeVideoId = useCallback((url: string): string | null => {
+  const extractStreamInfo = useCallback((url: string): { type: string; id: string | null } => {
     try {
+      // YouTube detection
       let match = url.match(/^(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^?/\s]{11})/i)
-      if (match) return match[1]
+      if (match) return { type: 'YouTube', id: match[1] }
 
-      // Handle youtube.com URLs
       match = url.match(/^(?:https?:\/\/)?(?:www\.)?youtube\.com\/(?:watch\?v=|live\/|embed\/)?([^?/\s]{11})/i)
-      if (match) return match[1]
+      if (match) return { type: 'YouTube', id: match[1] }
 
-      // Handle URLs with v= parameter
       const urlObj = new URL(url)
       const videoId = urlObj.searchParams.get('v')
-      if (videoId && videoId.length === 11) return videoId
+      if (videoId && videoId.length === 11) return { type: 'YouTube', id: videoId }
 
-      return null
+      // Twitch detection
+      match = url.match(/^(?:https?:\/\/)?(?:www\.)?twitch\.tv\/([a-zA-Z0-9_]{4,25})/i)
+      if (match) return { type: 'Twitch', id: match[1] }
+
+      return { type: '', id: null }
     } catch {
-      return null
+      return { type: '', id: null }
     }
   }, [])
 
@@ -67,10 +70,8 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
   const detectStreamType = useCallback((url: string): string => {
     if (!url) return '';
     try {
-      // Check for YouTube URLs first
-      if (extractYouTubeVideoId(url)) {
-        return 'YouTube';
-      }
+      const { type } = extractStreamInfo(url);
+      if (type) return type;
 
       const urlObj = new URL(url);
       const path = urlObj.pathname.toLowerCase();
@@ -85,7 +86,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
     } catch {
       return '';
     }
-  }, []);
+  }, [extractStreamInfo]);
 
   const isValidImageUrl = useCallback((url: string): boolean => {
     try {
@@ -161,10 +162,12 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
       const streamType = detectStreamType(pastedText)
       let cleanUrl = pastedText
 
-      if (streamType === 'YouTube') {
-        const videoId = extractYouTubeVideoId(pastedText)
-        if (videoId) {
-          cleanUrl = `https://www.youtube.com/watch?v=${videoId}`
+      if (streamType === 'YouTube' || streamType === 'Twitch') {
+        const { type, id } = extractStreamInfo(pastedText)
+        if (id) {
+          cleanUrl = type === 'YouTube'
+            ? `https://www.youtube.com/watch?v=${id}`
+            : `https://www.twitch.tv/${id}`
         }
       }
 
@@ -173,20 +176,29 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
       setStreamType(streamType)
 
       // Only auto-populate when adding a new stream
-      if (!editStream && streamType === 'YouTube') {
-        const videoId = extractYouTubeVideoId(cleanUrl)
-        if (videoId) {
-          // Set thumbnail
-          const thumbnailUrl = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
-          setFormData(prev => ({ ...prev, logoUrl: thumbnailUrl }))
-          trySetLogoPreview(thumbnailUrl)
+      if (!editStream) {
+        const { type, id } = extractStreamInfo(cleanUrl)
+        if (id) {
+          if (type === 'YouTube') {
+            // Set YouTube thumbnail and title
+            const thumbnailUrl = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
+            setFormData(prev => ({ ...prev, logoUrl: thumbnailUrl }))
+            trySetLogoPreview(thumbnailUrl)
 
-          // Set title
-          fetchYouTubeTitle(videoId).then(title => {
-            if (title) {
-              setFormData(prev => ({ ...prev, name: title }))
-            }
-          })
+            fetchYouTubeTitle(id).then(title => {
+              if (title) {
+                setFormData(prev => ({ ...prev, name: title }))
+              }
+            })
+          } else if (type === 'Twitch') {
+            // Set Twitch channel name as title and live preview image
+            setFormData(prev => ({
+              ...prev,
+              name: id,
+              logoUrl: `https://static-cdn.jtvnw.net/previews-ttv/live_user_${id}-1920x1080.jpg`
+            }))
+            trySetLogoPreview(`https://static-cdn.jtvnw.net/previews-ttv/live_user_${id}-1920x1080.jpg`)
+          }
         }
       }
     }
@@ -206,10 +218,12 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
         const type = detectStreamType(editStream.streamUrl)
         let cleanUrl = editStream.streamUrl
 
-        if (type === 'YouTube') {
-          const videoId = extractYouTubeVideoId(editStream.streamUrl)
-          if (videoId) {
-            cleanUrl = `https://www.youtube.com/watch?v=${videoId}`
+        if (type === 'YouTube' || type === 'Twitch') {
+          const { type: streamType, id } = extractStreamInfo(editStream.streamUrl)
+          if (id) {
+            cleanUrl = streamType === 'YouTube'
+              ? `https://www.youtube.com/watch?v=${id}`
+              : `https://www.twitch.tv/${id}`
           }
         }
 
@@ -230,7 +244,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
         setStreamType('')
       }
     }
-  }, [open, editStream, trySetLogoPreview, detectStreamType, extractYouTubeVideoId])
+  }, [open, editStream, trySetLogoPreview, detectStreamType, extractStreamInfo])
 
   return (
     <Dialog
@@ -324,10 +338,12 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
                 const streamType = detectStreamType(url)
                 let cleanUrl = url
 
-                if (streamType === 'YouTube') {
-                  const videoId = extractYouTubeVideoId(url)
-                  if (videoId) {
-                    cleanUrl = `https://www.youtube.com/watch?v=${videoId}`
+                if (streamType === 'YouTube' || streamType === 'Twitch') {
+                  const { type: streamType, id } = extractStreamInfo(url)
+                  if (id) {
+                    cleanUrl = streamType === 'YouTube'
+                      ? `https://www.youtube.com/watch?v=${id}`
+                      : `https://www.twitch.tv/${id}`
                   }
                 }
 
@@ -337,20 +353,29 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({ open, onClose,
                   setStreamType(streamType)
 
                   // Only auto-populate when adding a new stream
-                  if (!editStream && streamType === 'YouTube') {
-                    const videoId = extractYouTubeVideoId(cleanUrl)
-                    if (videoId) {
-                      // Set thumbnail
-                      const thumbnailUrl = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
-                      setFormData(prev => ({ ...prev, logoUrl: thumbnailUrl }))
-                      trySetLogoPreview(thumbnailUrl)
+                  if (!editStream) {
+                    const { type: streamType, id } = extractStreamInfo(cleanUrl)
+                    if (id) {
+                      if (streamType === 'YouTube') {
+                        // Set YouTube thumbnail and title
+                        const thumbnailUrl = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
+                        setFormData(prev => ({ ...prev, logoUrl: thumbnailUrl }))
+                        trySetLogoPreview(thumbnailUrl)
 
-                      // Set title
-                      fetchYouTubeTitle(videoId).then(title => {
-                        if (title) {
-                          setFormData(prev => ({ ...prev, name: title }))
-                        }
-                      })
+                        fetchYouTubeTitle(id).then(title => {
+                          if (title) {
+                            setFormData(prev => ({ ...prev, name: title }))
+                          }
+                        })
+                      } else if (streamType === 'Twitch') {
+                        // Set Twitch channel name as title and live preview image
+                        setFormData(prev => ({
+                          ...prev,
+                          name: id,
+                          logoUrl: `https://static-cdn.jtvnw.net/previews-ttv/live_user_${id}-1920x1080.jpg`
+                        }))
+                        trySetLogoPreview(`https://static-cdn.jtvnw.net/previews-ttv/live_user_${id}-1920x1080.jpg`)
+                      }
                     }
                   }
                 } else {

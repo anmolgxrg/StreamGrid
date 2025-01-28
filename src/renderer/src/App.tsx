@@ -56,7 +56,12 @@ export const App: React.FC = () => {
   const handleAddStream = (data: StreamFormData): void => {
     const newStream: Stream = {
       id: uuidv4(),
-      ...data
+      ...data,
+      isLivestream:
+        data.streamUrl.includes('twitch.tv') ||
+        data.streamUrl.includes('youtube.com/live') ||
+        data.streamUrl.includes('youtube.com/@') ||
+        data.streamUrl.includes('youtu.be/live')
     }
     addStream(newStream)
   }

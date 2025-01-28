@@ -1,4 +1,5 @@
 import { Stream, GridItem } from '../types/stream'
+import { ChatItem } from './useStreamStore'
 
 export const selectStreams = (state: { streams: Stream[] }): Stream[] => state.streams
 export const selectLayout = (state: { layout: GridItem[] }): GridItem[] => state.layout
@@ -6,8 +7,10 @@ export const selectLayout = (state: { layout: GridItem[] }): GridItem[] => state
 export const selectStreamById = (state: { streams: Stream[] }, id: string): Stream | undefined =>
   state.streams.find((stream) => stream.id === id)
 
-export const selectLayoutForStream = (state: { layout: GridItem[] }, id: string): GridItem | undefined =>
-  state.layout.find((item) => item.i === id)
+export const selectLayoutForStream = (
+  state: { layout: GridItem[] },
+  id: string
+): GridItem | undefined => state.layout.find((item) => item.i === id)
 
 export const selectStreamCount = (state: { streams: Stream[] }): number => state.streams.length
 
@@ -17,10 +20,21 @@ export const validateImportData = (data: unknown): { isValid: boolean; error?: s
     return { isValid: false, error: 'Invalid data format' }
   }
 
-  const { streams, layout } = data as { streams?: unknown; layout?: unknown }
+  const { streams, layout, chats } = data as {
+    streams?: unknown
+    layout?: unknown
+    chats?: unknown
+  }
 
-  if (!Array.isArray(streams) || !Array.isArray(layout)) {
-    return { isValid: false, error: 'Streams and layout must be arrays' }
+  if (
+    !Array.isArray(streams) ||
+    !Array.isArray(layout) ||
+    (chats !== undefined && !Array.isArray(chats))
+  ) {
+    return {
+      isValid: false,
+      error: 'Streams and layout must be arrays, and chats if present must be an array'
+    }
   }
 
   const isValidStream = (stream: unknown): stream is Stream =>
@@ -46,6 +60,26 @@ export const validateImportData = (data: unknown): { isValid: boolean; error?: s
 
   if (!layout.every(isValidLayout)) {
     return { isValid: false, error: 'Invalid layout data format' }
+  }
+
+  if (chats) {
+    const isValidChat = (chat: unknown): chat is ChatItem =>
+      typeof chat === 'object' &&
+      chat !== null &&
+      'id' in chat &&
+      'streamId' in chat &&
+      'streamType' in chat &&
+      'streamName' in chat &&
+      'streamIdentifier' in chat &&
+      typeof (chat as { id: unknown }).id === 'string' &&
+      typeof (chat as { streamId: unknown }).streamId === 'string' &&
+      typeof (chat as { streamType: unknown }).streamType === 'string' &&
+      typeof (chat as { streamName: unknown }).streamName === 'string' &&
+      typeof (chat as { streamIdentifier: unknown }).streamIdentifier === 'string'
+
+    if (!chats.every(isValidChat)) {
+      return { isValid: false, error: 'Invalid chat data format' }
+    }
   }
 
   return { isValid: true }

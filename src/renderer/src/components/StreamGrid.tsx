@@ -37,11 +37,11 @@ const ASPECT_RATIO = 16 / 9 // Standard video aspect ratio
 interface StreamGridProps {
   streams: Stream[]
   layout: GridItem[]
-  chats: { id: string; videoId: string; streamId: string; streamName: string }[]
+  chats: { id: string; streamId: string; streamType: string; streamName: string; streamIdentifier: string }[]
   onRemoveStream: (id: string) => void
   onLayoutChange: (layout: GridItem[]) => void
   onEditStream: (stream: Stream) => void
-  onAddChat: (videoId: string, streamId: string, streamName: string) => void
+  onAddChat: (streamIdentifier: string, streamId: string, streamName: string) => void
   onRemoveChat: (id: string) => void
 }
 
@@ -128,8 +128,9 @@ export const StreamGrid = React.memo(({
       <div key={chat.id} style={{ zIndex: lastDraggedId === chat.id ? 1000 : 1 }}>
         <ChatCard
           id={chat.id}
-          videoId={chat.videoId}
+          streamType={chat.streamType}
           streamName={chat.streamName}
+          streamIdentifier={chat.streamIdentifier}
           onRemove={onRemoveChat}
         />
       </div>

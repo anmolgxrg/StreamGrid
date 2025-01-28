@@ -6,6 +6,7 @@ declare global {
     api: {
       version: string
       getGitHubVersion: () => Promise<string | null>
+      openExternal: (url: string) => Promise<void>
     }
   }
 }

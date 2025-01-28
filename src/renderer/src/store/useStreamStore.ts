@@ -3,10 +3,18 @@ import { persist, devtools } from 'zustand/middleware'
 import { Stream, GridItem } from '../types/stream'
 import { validateImportData } from './streamSelectors'
 
+export interface ChatItem {
+  id: string
+  streamId: string
+  streamType: string
+  streamName: string
+  streamIdentifier: string
+}
+
 interface StreamStore {
   streams: Stream[]
   layout: GridItem[]
-  chats: { id: string; videoId: string; streamId: string; streamName: string }[]
+  chats: ChatItem[]
   lastDraggedId: string | null
   setLastDraggedId: (id: string | null) => void
   addStream: (stream: Stream) => void
@@ -14,9 +22,13 @@ interface StreamStore {
   updateStream: (id: string, updates: Partial<Stream>) => void
   updateLayout: (newLayout: GridItem[]) => void
   importStreams: (data: unknown) => { success: boolean; error?: string }
-  exportData: () => { streams: Stream[]; layout: GridItem[]; chats: { id: string; videoId: string; streamId: string; streamName: string }[] }
+  exportData: () => {
+    streams: Stream[]
+    layout: GridItem[]
+    chats: ChatItem[]
+  }
   batchUpdate: (updates: Partial<{ streams: Stream[]; layout: GridItem[] }>) => void
-  addChat: (videoId: string, streamId: string, streamName: string) => string
+  addChat: (streamIdentifier: string, streamId: string, streamName: string) => string
   removeChat: (id: string) => void
   removeChatsForStream: (streamId: string) => void
 }
@@ -24,7 +36,7 @@ interface StreamStore {
 const createInitialState = (): {
   streams: Stream[]
   layout: GridItem[]
-  chats: { id: string; videoId: string; streamId: string; streamName: string }[]
+  chats: ChatItem[]
   lastDraggedId: string | null
 } => ({
   streams: [],
@@ -73,13 +85,12 @@ export const useStreamStore = create<StreamStore>()(
           set(
             (state) => {
               // Remove stream and its layout
-              const newState = {
+              return {
                 streams: state.streams.filter((stream) => stream.id !== id),
                 layout: state.layout.filter((item) => item.i !== id),
                 // Also remove any associated chats
                 chats: state.chats.filter((chat) => chat.streamId !== id)
               }
-              return newState
             },
             false,
             'REMOVE_STREAM'
@@ -114,13 +125,29 @@ export const useStreamStore = create<StreamStore>()(
             return { success: false, error: validation.error }
           }
 
-          const { streams, layout } = data as { streams: Stream[]; layout: GridItem[] }
-          set({ streams, layout }, false, 'IMPORT_STREAMS')
+          const { streams, layout, chats } = data as {
+            streams: Stream[]
+            layout: GridItem[]
+            chats?: ChatItem[]
+          }
+          set({ streams, layout, chats: chats || [] }, false, 'IMPORT_STREAMS')
           return { success: true }
         },
 
-        addChat: (videoId, streamId, streamName): string => {
+        addChat: (streamIdentifier, streamId, streamName): string => {
           const id = `chat-${Date.now()}`
+          const stream = get().streams.find((s) => s.id === streamId)
+          if (!stream) return id
+
+          const streamType =
+            stream.streamUrl.includes('youtube.com') || stream.streamUrl.includes('youtu.be')
+              ? 'YouTube'
+              : stream.streamUrl.includes('twitch.tv')
+                ? 'Twitch'
+                : ''
+
+          if (!streamType) return id
+
           set(
             (state) => {
               const newLayout: GridItem = {
@@ -131,7 +158,7 @@ export const useStreamStore = create<StreamStore>()(
                 h: 3
               }
               return {
-                chats: [...state.chats, { id, videoId, streamId, streamName }],
+                chats: [...state.chats, { id, streamId, streamType, streamName, streamIdentifier }],
                 layout: [...state.layout, newLayout]
               }
             },
@@ -155,13 +182,20 @@ export const useStreamStore = create<StreamStore>()(
           set(
             (state) => ({
               chats: state.chats.filter((chat) => chat.streamId !== streamId),
-              layout: state.layout.filter((item) => !state.chats.find(chat => chat.streamId === streamId && chat.id === item.i))
+              layout: state.layout.filter(
+                (item) =>
+                  !state.chats.find((chat) => chat.streamId === streamId && chat.id === item.i)
+              )
             }),
             false,
             'REMOVE_CHATS_FOR_STREAM'
           ),
 
-        exportData: (): { streams: Stream[]; layout: GridItem[]; chats: { id: string; videoId: string; streamId: string; streamName: string }[] } => {
+        exportData: (): {
+          streams: Stream[]
+          layout: GridItem[]
+          chats: ChatItem[]
+        } => {
           const { streams, layout, chats } = get()
           return { streams, layout, chats }
         }

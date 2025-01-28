@@ -1,4 +1,13 @@
-import React, { useState, useCallback, useRef, memo, lazy, Suspense, useEffect, useMemo } from 'react'
+import React, {
+  useState,
+  useCallback,
+  useRef,
+  memo,
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo
+} from 'react'
 import PropTypes from 'prop-types'
 import { Card, IconButton, Typography, Box, CircularProgress } from '@mui/material'
 import { PlayArrow, Stop, Close, Edit, Chat } from '@mui/icons-material'
@@ -32,7 +41,7 @@ const extractYoutubeVideoId = (url: string): string | null => {
   return null
 }
 
-const detectStreamType = (url: string): 'hls' | 'dash' | 'youtube' | 'other' => {
+const detectStreamType = (url: string): 'hls' | 'dash' | 'youtube' | 'twitch' | 'other' => {
   const hlsPatterns = [/\.m3u8(\?.*)?$/i]
   const dashPatterns = [/\.mpd(\?.*)?$/i, /manifest\.mpd/i]
   const youtubePatterns = [
@@ -46,17 +55,33 @@ const detectStreamType = (url: string): 'hls' | 'dash' | 'youtube' | 'other' => 
     // YouTube embed URLs
     /^(https?:\/\/)?(www\.)?youtube\.com\/embed\/[a-zA-Z0-9_-]+/i
   ]
+  const twitchPatterns = [
+    // Twitch channel URLs
+    /^(https?:\/\/)?(www\.)?twitch\.tv\/([a-zA-Z0-9_]{4,25})/i
+  ]
 
-  if (hlsPatterns.some(pattern => pattern.test(url))) {
+  if (hlsPatterns.some((pattern) => pattern.test(url))) {
     return 'hls'
   }
-  if (dashPatterns.some(pattern => pattern.test(url))) {
+  if (dashPatterns.some((pattern) => pattern.test(url))) {
     return 'dash'
   }
-  if (youtubePatterns.some(pattern => pattern.test(url))) {
+  if (youtubePatterns.some((pattern) => pattern.test(url))) {
     return 'youtube'
   }
+  if (twitchPatterns.some((pattern) => pattern.test(url))) {
+    return 'twitch'
+  }
   return 'other'
+}
+
+const extractTwitchChannelName = (url: string): string | null => {
+  try {
+    const match = url.match(/^(?:https?:\/\/)?(?:www\.)?twitch\.tv\/([a-zA-Z0-9_]{4,25})/i)
+    return match ? match[1] : null
+  } catch {
+    return null
+  }
 }
 
 // Base player config
@@ -107,7 +132,6 @@ const DASH_CONFIG = {
   }
 }
 
-
 interface StreamCardProps {
   stream: Stream
   onRemove: (id: string) => void
@@ -124,11 +148,12 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
   const errorTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Clean up URL and determine player config
-  const { videoId, playerConfig, cleanUrl } = useMemo(() => {
+  const { videoId, channelName, playerConfig, cleanUrl, streamType } = useMemo(() => {
     const type = detectStreamType(stream.streamUrl)
     console.log(`Stream type detected for ${stream.name}:`, type)
 
     let vid: string | null = null
+    let channel: string | null = null
     let url = stream.streamUrl
     let config = {}
 
@@ -137,13 +162,23 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
       // Construct clean YouTube URL
       url = vid ? `https://www.youtube.com/watch?v=${vid}` : stream.streamUrl
       config = {} // For YouTube, pass URL directly without config
+    } else if (type === 'twitch') {
+      channel = extractTwitchChannelName(stream.streamUrl)
+      url = channel ? `https://www.twitch.tv/${channel}` : stream.streamUrl
+      config = {} // For Twitch, pass URL directly without config
     } else if (type === 'dash') {
       config = { file: DASH_CONFIG }
     } else {
       config = { file: HLS_CONFIG }
     }
 
-    return { videoId: vid, playerConfig: config, cleanUrl: url }
+    return {
+      videoId: vid,
+      channelName: channel,
+      playerConfig: config,
+      cleanUrl: url,
+      streamType: type
+    }
   }, [stream.streamUrl, stream.name])
 
   // Update logoUrl when stream.logoUrl changes
@@ -277,9 +312,15 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
               >
                 <Stop fontSize="small" />
               </IconButton>
-              {videoId && onAddChat && (
+              {(videoId || channelName) && onAddChat && (
                 <IconButton
-                  onClick={() => onAddChat(videoId, stream.id, stream.name)}
+                  onClick={() => {
+                    if (streamType === 'youtube' && videoId) {
+                      onAddChat(videoId, stream.id, stream.name)
+                    } else if (streamType === 'twitch' && channelName) {
+                      onAddChat(channelName, stream.id, stream.name)
+                    }
+                  }}
                   sx={{
                     backgroundColor: 'rgba(0,0,0,0.4)',
                     color: 'white',
