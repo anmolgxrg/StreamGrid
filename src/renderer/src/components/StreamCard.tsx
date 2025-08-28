@@ -1,3 +1,4 @@
+import jdenticon from 'jdenticon/standalone'
 import React, {
   useState,
   useCallback,
@@ -147,6 +148,14 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
   const [logoUrl, setLogoUrl] = useState<string>('')
   const errorTimerRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Generate avatar data URL if no logo URL is provided
+  const generatedAvatarUrl = useMemo(() => {
+    if (!stream.logoUrl) {
+      return `data:image/svg+xml,${encodeURIComponent(jdenticon.toSvg(stream.name, 200))}`
+    }
+    return null
+  }, [stream.logoUrl, stream.name])
+
   // Clean up URL and determine player config
   const { videoId, channelName, playerConfig, cleanUrl, streamType } = useMemo(() => {
     const type = detectStreamType(stream.streamUrl)
@@ -183,8 +192,8 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
 
   // Update logoUrl when stream.logoUrl changes
   useEffect(() => {
-    setLogoUrl(stream.logoUrl)
-  }, [stream.logoUrl])
+    setLogoUrl(stream.logoUrl || generatedAvatarUrl || '')
+  }, [stream.logoUrl, generatedAvatarUrl])
 
   const handlePlay = useCallback((): void => {
     // Reset state before playing
@@ -408,7 +417,8 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
               style={{
                 width: '100%',
                 height: '100%',
-                objectFit: 'contain'
+                objectFit: 'contain',
+                backgroundColor: !stream.logoUrl ? '#1a1a1a' : 'transparent'
               }}
               loading="lazy"
               referrerPolicy="no-referrer"
@@ -419,8 +429,8 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
                   img.setAttribute('crossOrigin', 'anonymous')
                   img.src = logoUrl
                 } else {
-                  // If CORS attempt also failed, clear the image
-                  img.removeAttribute('src')
+                  // If CORS attempt also failed, use generated avatar
+                  img.src = generatedAvatarUrl || ''
                   console.error('Failed to load logo:', logoUrl)
                 }
               }}
