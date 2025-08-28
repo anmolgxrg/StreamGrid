@@ -10,7 +10,12 @@ import {
   ListItemText,
   CircularProgress,
   Chip,
-  LinearProgress
+  LinearProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField
 } from '@mui/material'
 import {
   KeyboardArrowDown,
@@ -47,6 +52,14 @@ export const GridSelector: React.FC<GridSelectorProps> = ({ onNewGrid, onManageG
     streamCount: number
   }>>([])
   const [loading, setLoading] = useState(false)
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false)
+  const [newGridName, setNewGridName] = useState('')
+  const [gridToRename, setGridToRename] = useState<{
+    id: string
+    name: string
+    lastModified: string
+    streamCount: number
+  } | null>(null)
 
   const {
     currentGridName,
@@ -163,20 +176,34 @@ export const GridSelector: React.FC<GridSelectorProps> = ({ onNewGrid, onManageG
     }
   }
 
-  const handleRenameGrid = async (): Promise<void> => {
+  const handleOpenRenameDialog = (): void => {
     if (!selectedGrid) return
+    setGridToRename(selectedGrid) // Store the grid before closing context menu
+    setNewGridName(selectedGrid.name)
     handleCloseContextMenu()
+    setRenameDialogOpen(true)
+  }
 
-    const newName = prompt('Enter new name:', selectedGrid.name)
-    if (newName && newName !== selectedGrid.name) {
-      try {
-        await renameGrid(selectedGrid.id, newName)
-        // Refresh recent grids
-        await loadRecentGridsInfo()
-      } catch (error) {
-        console.error('Error renaming grid:', error)
-      }
+  const handleRenameGrid = async (): Promise<void> => {
+    if (!gridToRename || !newGridName.trim()) return
+
+    try {
+      await renameGrid(gridToRename.id, newGridName.trim())
+      // Refresh recent grids
+      await loadRecentGridsInfo()
+      setRenameDialogOpen(false)
+      setNewGridName('')
+      setGridToRename(null)
+    } catch (error) {
+      console.error('Error renaming grid:', error)
+      alert(`Failed to rename grid: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
+  }
+
+  const handleCloseRenameDialog = (): void => {
+    setRenameDialogOpen(false)
+    setNewGridName('')
+    setGridToRename(null)
   }
 
   const handleDeleteGrid = async (): Promise<void> => {
@@ -346,7 +373,7 @@ export const GridSelector: React.FC<GridSelectorProps> = ({ onNewGrid, onManageG
           </ListItemIcon>
           <ListItemText>Export Grid</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleRenameGrid}>
+        <MenuItem onClick={handleOpenRenameDialog}>
           <ListItemIcon>
             <DriveFileRenameOutline fontSize="small" />
           </ListItemIcon>
@@ -360,6 +387,48 @@ export const GridSelector: React.FC<GridSelectorProps> = ({ onNewGrid, onManageG
           <ListItemText>Delete</ListItemText>
         </MenuItem>
       </Menu>
+
+      {/* Rename Dialog */}
+      <Dialog
+        open={renameDialogOpen}
+        onClose={handleCloseRenameDialog}
+        maxWidth="xs"
+        fullWidth
+        disableEscapeKeyDown={false}
+        PaperProps={{
+          sx: { minWidth: 400 }
+        }}
+      >
+        <DialogTitle>Rename Grid</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Grid Name"
+            fullWidth
+            variant="outlined"
+            value={newGridName}
+            onChange={(e) => setNewGridName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && newGridName.trim() && newGridName !== gridToRename?.name) {
+                e.preventDefault()
+                handleRenameGrid()
+              }
+            }}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseRenameDialog}>Cancel</Button>
+          <Button
+            onClick={handleRenameGrid}
+            variant="contained"
+            disabled={!newGridName.trim() || newGridName === gridToRename?.name}
+          >
+            Rename
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   )
 }
