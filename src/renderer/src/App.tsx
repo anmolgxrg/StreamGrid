@@ -5,17 +5,23 @@ import {
   Toolbar,
   Typography,
   Button,
-  ButtonGroup,
   Menu,
   MenuItem,
-  Link
+  Link,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  TextField,
+  DialogActions
 } from '@mui/material'
-import { Add, KeyboardArrowDown, GitHub } from '@mui/icons-material'
+import { Add, GitHub } from '@mui/icons-material'
 import StreamGridLogo from './assets/StreamGrid.svg'
 import { v4 as uuidv4 } from 'uuid'
 import { StreamGrid } from './components/StreamGrid'
 import { AddStreamDialog } from './components/AddStreamDialog'
-import { useStreamStore } from './store/useStreamStore'
+import { GridSelector } from './components/GridSelector'
+import { GridManagementDialog } from './components/GridManagementDialog'
+import { useDebouncedStore } from './hooks/useDebouncedStore'
 import { Stream, StreamFormData } from './types/stream'
 import { LoadingScreen } from './components/LoadingScreen'
 import { UpdateAlert } from './components/UpdateAlert'
@@ -23,8 +29,10 @@ import { UpdateAlert } from './components/UpdateAlert'
 export const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
   const [aboutAnchorEl, setAboutAnchorEl] = useState<null | HTMLElement>(null)
+  const [newGridDialogOpen, setNewGridDialogOpen] = useState(false)
+  const [newGridName, setNewGridName] = useState('')
+  const [gridManagementOpen, setGridManagementOpen] = useState(false)
   const {
     streams,
     layout,
@@ -32,28 +40,59 @@ export const App: React.FC = () => {
     addStream,
     removeStream,
     updateLayout,
-    importStreams,
     updateStream,
     addChat,
     removeChat,
-    removeChatsForStream
-  } = useStreamStore()
+    removeChatsForStream,
+    createNewGrid,
+    saveNow,
+    hasUnsavedChanges
+  } = useDebouncedStore({
+    layoutDebounceMs: 300,
+    saveDebounceMs: 5000, // 5 seconds instead of 1 second
+    streamUpdateDebounceMs: 500
+  })
   const [editingStream, setEditingStream] = useState<Stream | undefined>(undefined)
 
-  useEffect((): (() => void) => {
-    // Simulate loading time to ensure all resources are properly loaded
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 2000)
+  useEffect(() => {
+    // Set loading to false immediately as resources are already loaded
+    setIsLoading(false)
 
-    return () => clearTimeout(timer)
-  }, [])
+    // Save on window close/refresh
+    const handleBeforeUnload = async (e: BeforeUnloadEvent): Promise<void> => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = ''
+        await saveNow()
+      }
+    }
+
+    // Listen for app quit event from main process
+    const handleAppQuit = async (): Promise<void> => {
+      if (hasUnsavedChanges) {
+        await saveNow()
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    // Add IPC listener for app quit
+    const removeQuitListener = window.api.onAppBeforeQuit(handleAppQuit)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      removeQuitListener()
+    }
+  }, [hasUnsavedChanges, saveNow])
+
+  // Auto-save is now handled by the debounced store
+  // No need for manual auto-save implementation here
 
   if (isLoading) {
     return <LoadingScreen />
   }
 
-  const handleAddStream = (data: StreamFormData): void => {
+  const handleAddStream = async (data: StreamFormData): Promise<void> => {
     const newStream: Stream = {
       id: uuidv4(),
       ...data,
@@ -64,11 +103,15 @@ export const App: React.FC = () => {
         data.streamUrl.includes('youtu.be/live')
     }
     addStream(newStream)
+    // Save immediately after adding a stream
+    await saveNow()
   }
 
-  const handleRemoveStream = (id: string): void => {
+  const handleRemoveStream = async (id: string): Promise<void> => {
     removeChatsForStream(id)
     removeStream(id)
+    // Save immediately after removing a stream
+    await saveNow()
   }
 
   const handleEditStream = (stream: Stream): void => {
@@ -76,49 +119,12 @@ export const App: React.FC = () => {
     setIsAddDialogOpen(true)
   }
 
-  const handleUpdateStream = (id: string, data: StreamFormData): void => {
+  const handleUpdateStream = async (id: string, data: StreamFormData): Promise<void> => {
     updateStream(id, data)
+    // Save immediately after updating a stream
+    await saveNow()
   }
 
-  const handleImport = (): void => {
-    setMenuAnchorEl(null)
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.json'
-    input.onchange = async (e: Event): Promise<void> => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (file) {
-        const reader = new FileReader()
-        reader.onload = (e): void => {
-          try {
-            const content = JSON.parse(e.target?.result as string)
-            const result = importStreams(content)
-            if (!result.success) {
-              console.error('Import failed:', result.error)
-            }
-          } catch (error) {
-            console.error('Error importing file:', error)
-          }
-        }
-        reader.readAsText(file)
-      }
-    }
-    input.click()
-  }
-
-  const handleExport = (): void => {
-    setMenuAnchorEl(null)
-    const data = useStreamStore.getState().exportData()
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'stream-config.json'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
 
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -156,45 +162,26 @@ export const App: React.FC = () => {
               StreamGrid
             </Typography>
           </Box>
-          <ButtonGroup variant="contained" sx={{ borderRadius: 1 }}>
-            <Button
-              startIcon={<Add />}
-              onClick={() => setIsAddDialogOpen(true)}
-              sx={{
-                textTransform: 'none',
-                px: 2
-              }}
-            >
-              Add Stream
-            </Button>
-            <Button
-              size="small"
-              onClick={(e) => setMenuAnchorEl(e.currentTarget)}
-              sx={{
-                px: 0.5,
-                minWidth: '36px',
-                borderLeft: '1px solid rgba(255, 255, 255, 0.3)'
-              }}
-            >
-              <KeyboardArrowDown />
-            </Button>
-          </ButtonGroup>
-          <Menu
-            anchorEl={menuAnchorEl}
-            open={Boolean(menuAnchorEl)}
-            onClose={() => setMenuAnchorEl(null)}
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'right'
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'right'
+
+          <GridSelector
+            onNewGrid={() => setNewGridDialogOpen(true)}
+            onManageGrids={() => setGridManagementOpen(true)}
+          />
+
+          <Box sx={{ mx: 2 }} />
+
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => setIsAddDialogOpen(true)}
+            sx={{
+              textTransform: 'none',
+              px: 2,
+              borderRadius: 1
             }}
           >
-            <MenuItem onClick={handleImport}>Import JSON</MenuItem>
-            <MenuItem onClick={handleExport}>Export JSON</MenuItem>
-          </Menu>
+            Add Stream
+          </Button>
 
           <Menu
             anchorEl={aboutAnchorEl}
@@ -215,8 +202,9 @@ export const App: React.FC = () => {
                   About StreamGrid
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>
-                  Created by Bernard Moerdler {window.api.version}
+                  Created by Bernard Moerdler - v{window.api.version}
                 </Typography>
+
                 <Link
                   href="https://github.com/LordKnish/StreamGrid"
                   target="_blank"
@@ -245,7 +233,11 @@ export const App: React.FC = () => {
           layout={layout}
           chats={chats}
           onRemoveStream={handleRemoveStream}
-          onLayoutChange={updateLayout}
+          onLayoutChange={async (newLayout) => {
+            updateLayout(newLayout)
+            // Save immediately after layout change (stream movement)
+            await saveNow()
+          }}
           onEditStream={handleEditStream}
           onAddChat={addChat}
           onRemoveChat={removeChat}
@@ -261,6 +253,62 @@ export const App: React.FC = () => {
         onAdd={handleAddStream}
         onEdit={handleUpdateStream}
         editStream={editingStream}
+      />
+
+      <Dialog
+        open={newGridDialogOpen}
+        onClose={() => {
+          setNewGridDialogOpen(false)
+          setNewGridName('')
+        }}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Create New Grid</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Grid Name"
+            fullWidth
+            variant="outlined"
+            value={newGridName}
+            onChange={(e) => setNewGridName(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' && newGridName.trim()) {
+                createNewGrid(newGridName.trim())
+                setNewGridDialogOpen(false)
+                setNewGridName('')
+              }
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setNewGridDialogOpen(false)
+            setNewGridName('')
+          }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              if (newGridName.trim()) {
+                createNewGrid(newGridName.trim())
+                setNewGridDialogOpen(false)
+                setNewGridName('')
+              }
+            }}
+            variant="contained"
+            disabled={!newGridName.trim()}
+          >
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <GridManagementDialog
+        open={gridManagementOpen}
+        onClose={() => setGridManagementOpen(false)}
       />
     </Box>
   )

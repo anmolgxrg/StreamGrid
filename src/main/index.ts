@@ -4,6 +4,9 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.svg?asset'
 import https from 'https'
+import fs from 'fs/promises'
+import path from 'path'
+import type { SavedGrid, GridManifest } from '../shared/types/grid'
 
 // Function to fetch latest GitHub release version
 async function getLatestGitHubVersion(): Promise<string> {
@@ -103,25 +106,12 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       devTools: true,
-      webSecurity: true // Enable web security for better protection
+      webSecurity: false // Disable web security to allow local file access
     }
   })
 
-  // Set Content Security Policy
-  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Content-Security-Policy': [
-          "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob: mediastream:;",
-          "media-src 'self' https: blob: mediastream: *;",
-          "connect-src 'self' https: ws: wss: blob: mediastream: *;",
-          "img-src 'self' https: data: blob: *;",
-          "worker-src 'self' blob: *;"
-        ].join(' ')
-      }
-    })
-  })
+  // Remove Content Security Policy since we've disabled web security for local file access
+  // This allows local files to be loaded without CSP restrictions
 
   // Add right-click menu for inspect element
   mainWindow.webContents.on('context-menu', (_, props): void => {
@@ -165,7 +155,7 @@ function createWindow(): void {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Check for updates on app start
   if (!is.dev) {
     checkForUpdates()
@@ -199,6 +189,29 @@ app.whenReady().then(() => {
     }
   })
 
+  // Add handler for file dialog
+  ipcMain.handle('show-open-dialog', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [
+        { name: 'Video Files', extensions: ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'm4v', 'flv', 'wmv'] },
+        { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg', 'aac', 'm4a', 'flac'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    })
+
+    if (!result.canceled && result.filePaths.length > 0) {
+      // Convert to file:// URL format
+      const filePath = result.filePaths[0]
+      const fileUrl = `file:///${filePath.replace(/\\/g, '/')}`
+      return { filePath, fileUrl }
+    }
+    return null
+  })
+
+  // Grid management setup
+  await setupGridManagement()
+
   createWindow()
 
   app.on('activate', function () {
@@ -206,6 +219,175 @@ app.whenReady().then(() => {
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+// Grid management setup function
+async function setupGridManagement(): Promise<void> {
+  const gridsDir = path.join(app.getPath('userData'), 'grids')
+  const manifestPath = path.join(gridsDir, 'manifest.json')
+
+  // Ensure grids directory exists
+  await fs.mkdir(gridsDir, { recursive: true })
+
+  // Initialize manifest if it doesn't exist
+  try {
+    await fs.access(manifestPath)
+  } catch {
+    const initialManifest: GridManifest = {
+      version: '1.0.0',
+      currentGridId: null,
+      grids: []
+    }
+    await fs.writeFile(manifestPath, JSON.stringify(initialManifest, null, 2))
+  }
+
+  // Save grid handler
+  ipcMain.handle('save-grid', async (_, grid: SavedGrid) => {
+    try {
+      const fileName = `${grid.id}.json`
+      const filePath = path.join(gridsDir, fileName)
+
+      // Save grid file
+      await fs.writeFile(filePath, JSON.stringify(grid, null, 2))
+
+      // Update manifest
+      const manifestData = await fs.readFile(manifestPath, 'utf-8')
+      const manifest: GridManifest = JSON.parse(manifestData)
+
+      const existingIndex = manifest.grids.findIndex(g => g.id === grid.id)
+      const gridInfo = {
+        id: grid.id,
+        name: grid.name,
+        createdAt: grid.createdAt,
+        lastModified: grid.lastModified,
+        streamCount: grid.streams.length,
+        fileName
+      }
+
+      if (existingIndex >= 0) {
+        manifest.grids[existingIndex] = gridInfo
+      } else {
+        manifest.grids.push(gridInfo)
+      }
+
+      manifest.currentGridId = grid.id
+      await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2))
+    } catch (error) {
+      console.error('Error saving grid:', error)
+      throw error
+    }
+  })
+
+  // Load grid handler
+  ipcMain.handle('load-grid', async (_, gridId: string) => {
+    try {
+      const filePath = path.join(gridsDir, `${gridId}.json`)
+      const data = await fs.readFile(filePath, 'utf-8')
+      return JSON.parse(data) as SavedGrid
+    } catch (error) {
+      console.error('Error loading grid:', error)
+      return null
+    }
+  })
+
+  // Delete grid handler
+  ipcMain.handle('delete-grid', async (_, gridId: string) => {
+    try {
+      const filePath = path.join(gridsDir, `${gridId}.json`)
+      await fs.unlink(filePath)
+
+      // Update manifest
+      const manifestData = await fs.readFile(manifestPath, 'utf-8')
+      const manifest: GridManifest = JSON.parse(manifestData)
+      manifest.grids = manifest.grids.filter(g => g.id !== gridId)
+
+      if (manifest.currentGridId === gridId) {
+        manifest.currentGridId = null
+      }
+
+      await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2))
+    } catch (error) {
+      console.error('Error deleting grid:', error)
+      throw error
+    }
+  })
+
+  // Rename grid handler
+  ipcMain.handle('rename-grid', async (_, gridId: string, newName: string) => {
+    try {
+      const filePath = path.join(gridsDir, `${gridId}.json`)
+      const data = await fs.readFile(filePath, 'utf-8')
+      const grid: SavedGrid = JSON.parse(data)
+
+      grid.name = newName
+      grid.lastModified = new Date().toISOString()
+
+      await fs.writeFile(filePath, JSON.stringify(grid, null, 2))
+
+      // Update manifest
+      const manifestData = await fs.readFile(manifestPath, 'utf-8')
+      const manifest: GridManifest = JSON.parse(manifestData)
+      const gridIndex = manifest.grids.findIndex(g => g.id === gridId)
+
+      if (gridIndex >= 0) {
+        manifest.grids[gridIndex].name = newName
+        manifest.grids[gridIndex].lastModified = grid.lastModified
+      }
+
+      await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2))
+    } catch (error) {
+      console.error('Error renaming grid:', error)
+      throw error
+    }
+  })
+
+  // Get manifest handler
+  ipcMain.handle('get-grid-manifest', async () => {
+    try {
+      const data = await fs.readFile(manifestPath, 'utf-8')
+      return JSON.parse(data) as GridManifest
+    } catch (error) {
+      console.error('Error getting manifest:', error)
+      return null
+    }
+  })
+
+  // Get all grids handler
+  ipcMain.handle('get-all-grids', async () => {
+    try {
+      const data = await fs.readFile(manifestPath, 'utf-8')
+      const manifest: GridManifest = JSON.parse(data)
+      return manifest.grids
+    } catch (error) {
+      console.error('Error getting all grids:', error)
+      return []
+    }
+  })
+}
+
+// Add handler for save request from renderer
+ipcMain.handle('request-save', async () => {
+  // This will be called by the renderer when it needs to save
+  return true
+})
+
+// Handle before-quit event to ensure saving
+app.on('before-quit', async (event) => {
+  // Send a message to all windows to save their state
+  const windows = BrowserWindow.getAllWindows()
+  if (windows.length > 0) {
+    event.preventDefault()
+
+    // Send save request to all windows
+    for (const window of windows) {
+      window.webContents.send('app-before-quit')
+    }
+
+    // Wait a bit for saves to complete
+    setTimeout(() => {
+      app.quit()
+    }, 1000)
+  }
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

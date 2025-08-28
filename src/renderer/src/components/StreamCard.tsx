@@ -42,7 +42,12 @@ const extractYoutubeVideoId = (url: string): string | null => {
   return null
 }
 
-const detectStreamType = (url: string): 'hls' | 'dash' | 'youtube' | 'twitch' | 'other' => {
+const detectStreamType = (url: string): 'hls' | 'dash' | 'youtube' | 'twitch' | 'local' | 'other' => {
+  // Check for local file first
+  if (url.startsWith('file://')) {
+    return 'local'
+  }
+
   const hlsPatterns = [/\.m3u8(\?.*)?$/i]
   const dashPatterns = [/\.mpd(\?.*)?$/i, /manifest\.mpd/i]
   const youtubePatterns = [
@@ -177,6 +182,9 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
       config = {} // For Twitch, pass URL directly without config
     } else if (type === 'dash') {
       config = { file: DASH_CONFIG }
+    } else if (type === 'local') {
+      // For local files, use minimal config
+      config = { file: BASE_CONFIG }
     } else {
       config = { file: HLS_CONFIG }
     }
@@ -487,20 +495,34 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
                   </Box>
                 }
               >
-                <ReactPlayer
-                  key={cleanUrl} // Use clean URL as key
-                  url={cleanUrl}
-                  width="100%"
-                  height="100%"
-                  playing={true}
-                  controls={true}
-                  onReady={handleReady}
-                  onError={handleError}
-                  config={playerConfig}
-                  playsinline
-                  stopOnUnmount
-                  pip={false}
-                />
+                {streamType === 'twitch' && channelName ? (
+                  <iframe
+                    src={`https://player.twitch.tv/?channel=${channelName}&parent=localhost&parent=${window.location.hostname}`}
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    allowFullScreen={true}
+                    scrolling="no"
+                    allow="autoplay; fullscreen"
+                    onLoad={handleReady}
+                    onError={handleError}
+                  />
+                ) : (
+                  <ReactPlayer
+                    key={cleanUrl} // Use clean URL as key
+                    url={cleanUrl}
+                    width="100%"
+                    height="100%"
+                    playing={true}
+                    controls={true}
+                    onReady={handleReady}
+                    onError={handleError}
+                    config={playerConfig}
+                    playsinline
+                    stopOnUnmount
+                    pip={false}
+                  />
+                )}
               </Suspense>
             </StreamErrorBoundary>
           </Box>

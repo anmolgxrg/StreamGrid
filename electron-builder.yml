@@ -9,6 +9,9 @@ files:
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!**/__tests__/**'
+  - '!**/*.test.*'
+  - '!**/test/**'
 asarUnpack:
   - resources/**
 win:
@@ -29,11 +32,24 @@ mac:
   notarize: false
 dmg:
   artifactName: ${name}-${version}.${ext}
+linux:
+  target:
+    - AppImage
+    - deb
+    - rpm
+  maintainer: LordKnish
+  category: AudioVideo
+  icon: src/renderer/src/assets/logo.png
+  artifactName: ${name}-${version}.${ext}
+  synopsis: Multi-stream viewer application
+  description: A high-performance multi-stream viewer application for watching multiple live streams simultaneously in customizable grid layouts
+appImage:
+  artifactName: ${name}-${version}.${ext}
 npmRebuild: false
 publish:
   provider: github
-  owner: bernie-m
-  repo: streamgrid
+  owner: LordKnish
+  repo: StreamGrid
   private: false
   releaseType: release
 electronDownload:

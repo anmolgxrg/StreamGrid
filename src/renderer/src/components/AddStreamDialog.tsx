@@ -12,8 +12,11 @@ import {
   Stack,
   Box,
   Typography,
-  Paper
+  Paper,
+  IconButton,
+  InputAdornment
 } from '@mui/material'
+import FolderOpenIcon from '@mui/icons-material/FolderOpen'
 import { Stream, StreamFormData } from '../types/stream'
 
 interface AddStreamDialogProps {
@@ -82,6 +85,18 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
     (url: string): string => {
       if (!url) return ''
       try {
+        // Check if it's a local file
+        if (url.startsWith('file://')) {
+          const extension = url.split('.').pop()?.toLowerCase()
+          if (['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'm4v', 'flv', 'wmv'].includes(extension || '')) {
+            return 'Local Video File'
+          }
+          if (['mp3', 'wav', 'ogg', 'aac', 'm4a', 'flac'].includes(extension || '')) {
+            return 'Local Audio File'
+          }
+          return 'Local File'
+        }
+
         const { type } = extractStreamInfo(url)
         if (type) return type
 
@@ -105,7 +120,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
   const isValidImageUrl = useCallback((url: string): boolean => {
     try {
       const parsedUrl = new URL(url)
-      return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:'
+      return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:' || parsedUrl.protocol === 'file:'
     } catch {
       return false
     }
@@ -142,7 +157,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
     return (
       formData.name.length >= 2 &&
       (formData.logoUrl.length === 0 || isValidImageUrl(formData.logoUrl)) &&
-      ReactPlayer.canPlay(formData.streamUrl)
+      (ReactPlayer.canPlay(formData.streamUrl) || formData.streamUrl.startsWith('file://'))
     )
   }, [formData, isValidImageUrl])
 
@@ -154,6 +169,24 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
     }
     onClose()
   }, [editStream, onEdit, onAdd, formData, onClose])
+
+  // Handle local file selection
+  const handleBrowseFile = useCallback(async (): Promise<void> => {
+    const result = await window.api.showOpenDialog()
+    if (result) {
+      const { filePath, fileUrl } = result
+      const fileName = filePath.split(/[\\/]/).pop() || 'Local File'
+      const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '')
+
+      setFormData((prev) => ({
+        ...prev,
+        streamUrl: fileUrl,
+        name: prev.name || nameWithoutExt
+      }))
+      setStreamPreview(fileUrl)
+      setStreamType(detectStreamType(fileUrl))
+    }
+  }, [detectStreamType])
 
   // Handle URL auto-detection on paste
   const handlePaste = useCallback(
@@ -366,7 +399,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
           <Box>
             <TextField
               id="stream-url"
-              label="Stream URL"
+              label="Stream URL or Local File"
               fullWidth
               value={formData.streamUrl}
               onChange={(e) => {
@@ -385,7 +418,7 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
                 }
 
                 setFormData((prev) => ({ ...prev, streamUrl: cleanUrl }))
-                if (ReactPlayer.canPlay(cleanUrl)) {
+                if (ReactPlayer.canPlay(cleanUrl) || cleanUrl.startsWith('file://')) {
                   setStreamPreview(cleanUrl)
                   setStreamType(streamType)
 
@@ -422,17 +455,30 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
                   setStreamType('')
                 }
               }}
-              error={formData.streamUrl.length > 0 && !ReactPlayer.canPlay(formData.streamUrl)}
+              error={formData.streamUrl.length > 0 && !ReactPlayer.canPlay(formData.streamUrl) && !formData.streamUrl.startsWith('file://')}
               helperText={
                 formData.streamUrl.length > 0
-                  ? !ReactPlayer.canPlay(formData.streamUrl)
+                  ? !ReactPlayer.canPlay(formData.streamUrl) && !formData.streamUrl.startsWith('file://')
                     ? 'Invalid stream URL'
                     : streamType
                       ? `Stream Type: ${streamType}`
                       : ' '
-                  : ' '
+                  : 'Enter a URL or browse for a local file'
               }
               onPaste={handlePaste}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={handleBrowseFile}
+                      edge="end"
+                      title="Browse for local file"
+                    >
+                      <FolderOpenIcon />
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
             />
             {streamPreview && (
               <Paper
