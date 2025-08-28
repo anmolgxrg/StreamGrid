@@ -9,6 +9,9 @@ files:
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!**/__tests__/**'
+  - '!**/*.test.*'
+  - '!**/test/**'
 asarUnpack:
   - resources/**
 win:
@@ -32,8 +35,8 @@ dmg:
 npmRebuild: false
 publish:
   provider: github
-  owner: bernie-m
-  repo: streamgrid
+  owner: LordKnish
+  repo: StreamGrid
   private: false
   releaseType: release
 electronDownload:

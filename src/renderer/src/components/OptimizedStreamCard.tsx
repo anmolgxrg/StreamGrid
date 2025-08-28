@@ -319,7 +319,7 @@ export const OptimizedStreamCard: React.FC<StreamCardProps> = memo(({
   // Use intersection observer for visibility detection
   const { observeItem, unobserveItem } = containerRef
     ? useVirtualGridWithIntersection(containerRef)
-    : { observeItem: (): void => {}, unobserveItem: (): void => {} }
+    : { observeItem: (): void => { }, unobserveItem: (): void => { } }
 
   // Generate avatar data URL if no logo URL is provided
   const generatedAvatarUrl = useMemo(() => {
