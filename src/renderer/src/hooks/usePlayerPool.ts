@@ -222,7 +222,7 @@ export const usePlayerPool = (options: PlayerPoolOptions = {}): PlayerPoolReturn
   }, [config.maxPoolSize])
 
   const clearPool = useCallback((): void => {
-    poolRef.current.forEach((player, id) => {
+    poolRef.current.forEach((_player, id) => {
       destroyPlayer(id)
     })
     poolRef.current.clear()

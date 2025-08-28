@@ -247,17 +247,23 @@ describe('Performance Tests', () => {
 
   describe('VirtualStreamGrid Performance', () => {
     it('should render only visible items', async () => {
-      const onStreamUpdate = vi.fn()
-      const onStreamRemove = vi.fn()
+      const onEditStream = vi.fn()
+      const onRemoveStream = vi.fn()
       const onLayoutChange = vi.fn()
+      const onAddChat = vi.fn()
+      const onRemoveChat = vi.fn()
 
       const { container } = render(
         <div style={{ width: 1200, height: 600 }}>
           <VirtualStreamGrid
             streams={mockStreams}
-            onStreamUpdate={onStreamUpdate}
-            onStreamRemove={onStreamRemove}
+            layout={mockGridItems}
+            chats={[]}
+            onEditStream={onEditStream}
+            onRemoveStream={onRemoveStream}
             onLayoutChange={onLayoutChange}
+            onAddChat={onAddChat}
+            onRemoveChat={onRemoveChat}
           />
         </div>
       )
@@ -279,7 +285,16 @@ describe('Performance Tests', () => {
         position: {
           x: (i % 10) * 2,
           y: Math.floor(i / 10) * 3
-        }
+        },
+        isLivestream: true
+      }))
+
+      const largeLayout: GridItem[] = Array.from({ length: 1000 }, (_, i) => ({
+        i: `stream-${i}`,
+        x: (i % 10) * 2,
+        y: Math.floor(i / 10) * 3,
+        w: 2,
+        h: 3
       }))
 
       const startTime = performance.now()
@@ -288,9 +303,13 @@ describe('Performance Tests', () => {
         <div style={{ width: 1200, height: 600 }}>
           <VirtualStreamGrid
             streams={largeDataset}
-            onStreamUpdate={vi.fn()}
-            onStreamRemove={vi.fn()}
+            layout={largeLayout}
+            chats={[]}
+            onEditStream={vi.fn()}
+            onRemoveStream={vi.fn()}
             onLayoutChange={vi.fn()}
+            onAddChat={vi.fn()}
+            onRemoveChat={vi.fn()}
           />
         </div>
       )
@@ -309,9 +328,8 @@ describe('Performance Tests', () => {
       // Wrap component to track renders
       const TrackedStreamCard: React.FC<{
         stream: Stream
-        onUpdate: (id: string, updates: Partial<Stream>) => void
         onRemove: (id: string) => void
-        style: React.CSSProperties
+        onEdit: (stream: Stream) => void
       }> = (props) => {
         renderSpy()
         return <OptimizedStreamCard {...props} />
@@ -320,9 +338,8 @@ describe('Performance Tests', () => {
       const { rerender } = render(
         <TrackedStreamCard
           stream={mockStreams[0]}
-          onUpdate={vi.fn()}
           onRemove={vi.fn()}
-          style={{}}
+          onEdit={vi.fn()}
         />
       )
 
@@ -332,9 +349,8 @@ describe('Performance Tests', () => {
       rerender(
         <TrackedStreamCard
           stream={mockStreams[0]}
-          onUpdate={vi.fn()}
           onRemove={vi.fn()}
-          style={{}}
+          onEdit={vi.fn()}
         />
       )
 
@@ -345,9 +361,8 @@ describe('Performance Tests', () => {
       rerender(
         <TrackedStreamCard
           stream={mockStreams[1]}
-          onUpdate={vi.fn()}
           onRemove={vi.fn()}
-          style={{}}
+          onEdit={vi.fn()}
         />
       )
 

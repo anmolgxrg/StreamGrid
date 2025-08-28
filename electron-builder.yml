@@ -32,6 +32,19 @@ mac:
   notarize: false
 dmg:
   artifactName: ${name}-${version}.${ext}
+linux:
+  target:
+    - AppImage
+    - deb
+    - rpm
+  maintainer: LordKnish
+  category: AudioVideo
+  icon: src/renderer/src/assets/logo.png
+  artifactName: ${name}-${version}.${ext}
+  synopsis: Multi-stream viewer application
+  description: A high-performance multi-stream viewer application for watching multiple live streams simultaneously in customizable grid layouts
+appImage:
+  artifactName: ${name}-${version}.${ext}
 npmRebuild: false
 publish:
   provider: github

@@ -1,6 +1,6 @@
 import { useCallback, useRef, useEffect, useState } from 'react'
 import { debounce } from 'lodash'
-import { useStreamStore } from '../store/useStreamStore'
+import { useStreamStore, type ChatItem } from '../store/useStreamStore'
 import { Stream, GridItem } from '../types/stream'
 import { SavedGrid } from '../types/grid'
 
@@ -16,10 +16,48 @@ const DEFAULT_OPTIONS: Required<DebouncedStoreOptions> = {
   streamUpdateDebounceMs: 500
 }
 
-type DebouncedStore = Omit<ReturnType<typeof useStreamStore>, 'updateLayout' | 'updateStream' | 'batchUpdate' | 'saveCurrentGrid'> & {
-  updateLayout: (newLayout: GridItem[]) => void
+// Define the DebouncedStore interface
+export interface DebouncedStore {
+  // Core state
+  streams: Stream[]
+  layout: GridItem[]
+  chats: ChatItem[]
+  lastDraggedId: string | null
+  currentGridId: string | null
+  currentGridName: string
+  hasUnsavedChanges: boolean
+  recentGridIds: string[]
+  isSaving: boolean
+
+  // Core methods
+  setLastDraggedId: (id: string | null) => void
+  addStream: (stream: Stream) => void
+  removeStream: (id: string) => void
   updateStream: (id: string, updates: Partial<Stream>) => void
-  batchUpdate: (updates: { streams?: Stream[]; layout?: GridItem[] }) => void
+  updateLayout: (newLayout: GridItem[]) => void
+  importStreams: (data: unknown) => { success: boolean; error?: string }
+  exportData: () => {
+    streams: Stream[]
+    layout: GridItem[]
+    chats: ChatItem[]
+  }
+  batchUpdate: (updates: Partial<{ streams: Stream[]; layout: GridItem[] }>) => void
+  addChat: (streamIdentifier: string, streamId: string, streamName: string) => string
+  removeChat: (id: string) => void
+  removeChatsForStream: (streamId: string) => void
+
+  // Grid management methods
+  saveCurrentGrid: (name?: string) => Promise<SavedGrid>
+  loadGrid: (gridId: string) => Promise<void>
+  deleteGrid: (gridId: string) => Promise<void>
+  renameGrid: (gridId: string, newName: string) => Promise<void>
+  createNewGrid: (name: string) => void
+  setCurrentGridName: (name: string) => void
+  markAsUnsaved: () => void
+  markAsSaved: () => void
+  updateRecentGrids: (gridId: string) => void
+
+  // Additional debounced store methods
   saveNow: (name?: string) => Promise<SavedGrid>
   cancelPendingUpdates: () => void
   hasPendingUpdates: () => boolean
