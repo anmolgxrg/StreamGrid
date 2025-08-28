@@ -7,6 +7,7 @@ const api = {
   version: ipcRenderer.sendSync('get-app-version'),
   getGitHubVersion: (): Promise<string | null> => ipcRenderer.invoke('get-github-version'),
   openExternal: (url: string): Promise<void> => shell.openExternal(url),
+  showOpenDialog: (): Promise<{ filePath: string; fileUrl: string } | null> => ipcRenderer.invoke('show-open-dialog'),
   // Grid management APIs
   saveGrid: (grid: SavedGrid): Promise<void> => ipcRenderer.invoke('save-grid', grid),
   loadGrid: (gridId: string): Promise<SavedGrid | null> => ipcRenderer.invoke('load-grid', gridId),

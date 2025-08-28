@@ -106,25 +106,12 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       devTools: true,
-      webSecurity: true // Enable web security for better protection
+      webSecurity: false // Disable web security to allow local file access
     }
   })
 
-  // Set Content Security Policy
-  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Content-Security-Policy': [
-          "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob: mediastream:;",
-          "media-src 'self' https: blob: mediastream: *;",
-          "connect-src 'self' https: ws: wss: blob: mediastream: *;",
-          "img-src 'self' https: data: blob: *;",
-          "worker-src 'self' blob: *;"
-        ].join(' ')
-      }
-    })
-  })
+  // Remove Content Security Policy since we've disabled web security for local file access
+  // This allows local files to be loaded without CSP restrictions
 
   // Add right-click menu for inspect element
   mainWindow.webContents.on('context-menu', (_, props): void => {
@@ -200,6 +187,26 @@ app.whenReady().then(async () => {
       console.error('Error fetching GitHub version:', error)
       return null
     }
+  })
+
+  // Add handler for file dialog
+  ipcMain.handle('show-open-dialog', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [
+        { name: 'Video Files', extensions: ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'm4v', 'flv', 'wmv'] },
+        { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg', 'aac', 'm4a', 'flac'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    })
+
+    if (!result.canceled && result.filePaths.length > 0) {
+      // Convert to file:// URL format
+      const filePath = result.filePaths[0]
+      const fileUrl = `file:///${filePath.replace(/\\/g, '/')}`
+      return { filePath, fileUrl }
+    }
+    return null
   })
 
   // Grid management setup

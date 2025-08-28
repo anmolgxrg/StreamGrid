@@ -42,7 +42,12 @@ const extractYoutubeVideoId = (url: string): string | null => {
   return null
 }
 
-const detectStreamType = (url: string): 'hls' | 'dash' | 'youtube' | 'twitch' | 'other' => {
+const detectStreamType = (url: string): 'hls' | 'dash' | 'youtube' | 'twitch' | 'local' | 'other' => {
+  // Check for local file first
+  if (url.startsWith('file://')) {
+    return 'local'
+  }
+
   const hlsPatterns = [/\.m3u8(\?.*)?$/i]
   const dashPatterns = [/\.mpd(\?.*)?$/i, /manifest\.mpd/i]
   const youtubePatterns = [
@@ -177,6 +182,9 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
       config = {} // For Twitch, pass URL directly without config
     } else if (type === 'dash') {
       config = { file: DASH_CONFIG }
+    } else if (type === 'local') {
+      // For local files, use minimal config
+      config = { file: BASE_CONFIG }
     } else {
       config = { file: HLS_CONFIG }
     }

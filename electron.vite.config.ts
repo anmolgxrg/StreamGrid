@@ -17,15 +17,8 @@ export default defineConfig({
     },
     plugins: [react()],
     server: {
-      headers: {
-        'Content-Security-Policy': [
-          "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob: mediastream:;",
-          "media-src 'self' https: blob: mediastream: *;",
-          "connect-src 'self' https: ws: wss: blob: mediastream: *;",
-          "img-src 'self' https: data: blob: *;",
-          "worker-src 'self' blob: *;"
-        ].join(' ')
-      }
+      // Remove CSP headers to allow local file access
+      headers: {}
     }
   }
 })

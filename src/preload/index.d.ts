@@ -8,6 +8,7 @@ declare global {
       version: string
       getGitHubVersion: () => Promise<string | null>
       openExternal: (url: string) => Promise<void>
+      showOpenDialog: () => Promise<{ filePath: string; fileUrl: string } | null>
       // Grid management APIs
       saveGrid: (grid: SavedGrid) => Promise<void>
       loadGrid: (gridId: string) => Promise<SavedGrid | null>
