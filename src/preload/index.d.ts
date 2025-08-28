@@ -16,6 +16,8 @@ declare global {
       renameGrid: (gridId: string, newName: string) => Promise<void>
       getGridManifest: () => Promise<GridManifest>
       getAllGrids: () => Promise<Array<{ id: string; name: string; lastModified: string; streamCount: number }>>
+      // App lifecycle events
+      onAppBeforeQuit: (callback: () => void) => () => void
     }
   }
 }

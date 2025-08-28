@@ -113,8 +113,14 @@ export const GridSelector: React.FC<GridSelectorProps> = ({ onNewGrid, onManageG
   const handleLoadGrid = async (gridId: string): Promise<void> => {
     handleClose()
     if (hasUnsavedChanges) {
-      const confirmed = confirm('You have unsaved changes. Do you want to continue?')
-      if (!confirmed) return
+      // Save current grid before switching
+      try {
+        await saveCurrentGrid()
+      } catch (error) {
+        console.error('Error saving current grid:', error)
+        const confirmed = confirm('Failed to save current grid. Do you want to continue without saving?')
+        if (!confirmed) return
+      }
     }
 
     setLoading(true)

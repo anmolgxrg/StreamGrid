@@ -56,3 +56,5 @@ lerna-debug.log*
 # Yarn Integrity file
 .yarn-integrity
 .vscode/extensions.json
+cline_docs_backup/*
+cline_docs/*

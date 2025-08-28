@@ -365,6 +365,31 @@ async function setupGridManagement(): Promise<void> {
   })
 }
 
+// Add handler for save request from renderer
+ipcMain.handle('request-save', async () => {
+  // This will be called by the renderer when it needs to save
+  return true
+})
+
+// Handle before-quit event to ensure saving
+app.on('before-quit', async (event) => {
+  // Send a message to all windows to save their state
+  const windows = BrowserWindow.getAllWindows()
+  if (windows.length > 0) {
+    event.preventDefault()
+
+    // Send save request to all windows
+    for (const window of windows) {
+      window.webContents.send('app-before-quit')
+    }
+
+    // Wait a bit for saves to complete
+    setTimeout(() => {
+      app.quit()
+    }, 1000)
+  }
+})
+
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.

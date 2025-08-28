@@ -22,11 +22,14 @@ import {
   Edit,
   Delete,
   FileDownload,
+  FileUpload,
   ContentCopy,
   Search
 } from '@mui/icons-material'
 import { formatDistanceToNow } from 'date-fns'
 import { useStreamStore } from '../store/useStreamStore'
+import { Button } from '@mui/material'
+import { Stream, GridItem } from '../types/stream'
 
 interface GridManagementDialogProps {
   open: boolean
@@ -141,6 +144,82 @@ export const GridManagementDialog: React.FC<GridManagementDialogProps> = ({ open
     }
   }
 
+  const handleImportGrid = async (): Promise<void> => {
+    try {
+      // Create file input element
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = '.json'
+
+      input.onchange = async (e): Promise<void> => {
+        const file = (e.target as HTMLInputElement).files?.[0]
+        if (!file) return
+
+        try {
+          const text = await file.text()
+          const data = JSON.parse(text)
+
+          // Validate the imported data structure
+          if (!data.streams || !Array.isArray(data.streams) ||
+              !data.layout || !Array.isArray(data.layout)) {
+            alert('Invalid grid file format. Please ensure the file contains streams and layout arrays.')
+            return
+          }
+
+          // Validate each stream has required fields
+          const validStreams = data.streams.every((stream: Stream) =>
+            stream.id && stream.name && stream.logoUrl && stream.streamUrl
+          )
+
+          if (!validStreams) {
+            alert('Invalid stream data. Each stream must have id, name, logoUrl, and streamUrl.')
+            return
+          }
+
+          // Validate each layout item has required fields
+          const validLayout = data.layout.every((item: GridItem) =>
+            item.i !== undefined &&
+            item.x !== undefined &&
+            item.y !== undefined &&
+            item.w !== undefined &&
+            item.h !== undefined
+          )
+
+          if (!validLayout) {
+            alert('Invalid layout data. Each layout item must have i, x, y, w, and h properties.')
+            return
+          }
+
+          // Import the data using the store's import method
+          const result = useStreamStore.getState().importStreams({
+            streams: data.streams,
+            layout: data.layout,
+            chats: data.chats || []
+          })
+
+          if (result.success) {
+            // Save as a new grid with the file name (without extension)
+            const gridName = file.name.replace(/\.json$/, '') || 'Imported Grid'
+            await useStreamStore.getState().saveCurrentGrid(gridName)
+            await loadGrids()
+            alert(`Grid "${gridName}" imported successfully!`)
+          } else {
+            alert(`Import failed: ${result.error}`)
+          }
+        } catch (error) {
+          console.error('Error parsing JSON file:', error)
+          alert('Failed to parse JSON file. Please ensure it is a valid JSON format.')
+        }
+      }
+
+      // Trigger file selection
+      input.click()
+    } catch (error) {
+      console.error('Error importing grid:', error)
+      alert('Failed to import grid.')
+    }
+  }
+
   const filteredGrids = grids.filter(grid =>
     grid.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
@@ -165,20 +244,29 @@ export const GridManagementDialog: React.FC<GridManagementDialogProps> = ({ open
       </DialogTitle>
 
       <DialogContent>
-        <TextField
-          fullWidth
-          placeholder="Search grids..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ mb: 3 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search />
-              </InputAdornment>
-            )
-          }}
-        />
+        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+          <TextField
+            fullWidth
+            placeholder="Search grids..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search />
+                </InputAdornment>
+              )
+            }}
+          />
+          <Button
+            variant="contained"
+            startIcon={<FileUpload />}
+            onClick={handleImportGrid}
+            sx={{ whiteSpace: 'nowrap' }}
+          >
+            Import Grid
+          </Button>
+        </Box>
 
         <Grid container spacing={2}>
           {filteredGrids.map((grid) => (

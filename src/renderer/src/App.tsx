@@ -21,7 +21,7 @@ import { StreamGrid } from './components/StreamGrid'
 import { AddStreamDialog } from './components/AddStreamDialog'
 import { GridSelector } from './components/GridSelector'
 import { GridManagementDialog } from './components/GridManagementDialog'
-import { useStreamStore } from './store/useStreamStore'
+import { useDebouncedStore } from './hooks/useDebouncedStore'
 import { Stream, StreamFormData } from './types/stream'
 import { LoadingScreen } from './components/LoadingScreen'
 import { UpdateAlert } from './components/UpdateAlert'
@@ -45,41 +45,54 @@ export const App: React.FC = () => {
     removeChat,
     removeChatsForStream,
     createNewGrid,
-    saveCurrentGrid,
+    saveNow,
     hasUnsavedChanges
-  } = useStreamStore()
+  } = useDebouncedStore({
+    layoutDebounceMs: 300,
+    saveDebounceMs: 5000, // 5 seconds instead of 1 second
+    streamUpdateDebounceMs: 500
+  })
   const [editingStream, setEditingStream] = useState<Stream | undefined>(undefined)
 
-  useEffect((): (() => void) => {
-    // Simulate loading time to ensure all resources are properly loaded
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 2000)
+  useEffect(() => {
+    // Set loading to false immediately as resources are already loaded
+    setIsLoading(false)
 
-    return () => clearTimeout(timer)
-  }, [])
-
-  // Auto-save functionality
-  useEffect((): (() => void) | undefined => {
-    if (hasUnsavedChanges) {
-      const saveTimer = setTimeout(async () => {
-        try {
-          await saveCurrentGrid()
-          console.log('Auto-saved grid')
-        } catch (error) {
-          console.error('Auto-save failed:', error)
-        }
-      }, 1000) // Save 1 second after last change
-
-      return () => clearTimeout(saveTimer)
+    // Save on window close/refresh
+    const handleBeforeUnload = async (e: BeforeUnloadEvent): Promise<void> => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = ''
+        await saveNow()
+      }
     }
-  }, [streams, layout, chats, hasUnsavedChanges, saveCurrentGrid])
+
+    // Listen for app quit event from main process
+    const handleAppQuit = async (): Promise<void> => {
+      if (hasUnsavedChanges) {
+        await saveNow()
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    // Add IPC listener for app quit
+    const removeQuitListener = window.api.onAppBeforeQuit(handleAppQuit)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      removeQuitListener()
+    }
+  }, [hasUnsavedChanges, saveNow])
+
+  // Auto-save is now handled by the debounced store
+  // No need for manual auto-save implementation here
 
   if (isLoading) {
     return <LoadingScreen />
   }
 
-  const handleAddStream = (data: StreamFormData): void => {
+  const handleAddStream = async (data: StreamFormData): Promise<void> => {
     const newStream: Stream = {
       id: uuidv4(),
       ...data,
@@ -90,11 +103,15 @@ export const App: React.FC = () => {
         data.streamUrl.includes('youtu.be/live')
     }
     addStream(newStream)
+    // Save immediately after adding a stream
+    await saveNow()
   }
 
-  const handleRemoveStream = (id: string): void => {
+  const handleRemoveStream = async (id: string): Promise<void> => {
     removeChatsForStream(id)
     removeStream(id)
+    // Save immediately after removing a stream
+    await saveNow()
   }
 
   const handleEditStream = (stream: Stream): void => {
@@ -102,8 +119,10 @@ export const App: React.FC = () => {
     setIsAddDialogOpen(true)
   }
 
-  const handleUpdateStream = (id: string, data: StreamFormData): void => {
+  const handleUpdateStream = async (id: string, data: StreamFormData): Promise<void> => {
     updateStream(id, data)
+    // Save immediately after updating a stream
+    await saveNow()
   }
 
 
@@ -183,8 +202,9 @@ export const App: React.FC = () => {
                   About StreamGrid
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>
-                  Created by Bernard Moerdler {window.api.version}
+                  Created by Bernard Moerdler - v{window.api.version}
                 </Typography>
+
                 <Link
                   href="https://github.com/LordKnish/StreamGrid"
                   target="_blank"
@@ -213,7 +233,11 @@ export const App: React.FC = () => {
           layout={layout}
           chats={chats}
           onRemoveStream={handleRemoveStream}
-          onLayoutChange={updateLayout}
+          onLayoutChange={async (newLayout) => {
+            updateLayout(newLayout)
+            // Save immediately after layout change (stream movement)
+            await saveNow()
+          }}
           onEditStream={handleEditStream}
           onAddChat={addChat}
           onRemoveChat={removeChat}

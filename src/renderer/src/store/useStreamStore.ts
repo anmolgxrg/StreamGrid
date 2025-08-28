@@ -360,7 +360,18 @@ export const useStreamStore = create<StreamStore>()(
       }),
       {
         name: 'stream-grid-storage',
-        version: 1
+        version: 1,
+        partialize: (state) => ({
+          // Only persist these fields
+          streams: state.streams,
+          layout: state.layout,
+          chats: state.chats,
+          currentGridId: state.currentGridId,
+          currentGridName: state.currentGridName,
+          recentGridIds: state.recentGridIds,
+          // Explicitly exclude transient states:
+          // hasUnsavedChanges, isSaving, lastDraggedId
+        })
       }
     )
   )

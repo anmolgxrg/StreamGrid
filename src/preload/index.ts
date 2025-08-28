@@ -14,7 +14,13 @@ const api = {
   deleteGrid: (gridId: string): Promise<void> => ipcRenderer.invoke('delete-grid', gridId),
   renameGrid: (gridId: string, newName: string): Promise<void> => ipcRenderer.invoke('rename-grid', gridId, newName),
   getGridManifest: (): Promise<GridManifest> => ipcRenderer.invoke('get-grid-manifest'),
-  getAllGrids: (): Promise<Array<{ id: string; name: string; lastModified: string; streamCount: number }>> => ipcRenderer.invoke('get-all-grids')
+  getAllGrids: (): Promise<Array<{ id: string; name: string; lastModified: string; streamCount: number }>> => ipcRenderer.invoke('get-all-grids'),
+  // App lifecycle events
+  onAppBeforeQuit: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on('app-before-quit', listener)
+    return () => ipcRenderer.removeListener('app-before-quit', listener)
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
