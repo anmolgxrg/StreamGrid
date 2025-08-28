@@ -477,20 +477,34 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
                   </Box>
                 }
               >
-                <ReactPlayer
-                  key={cleanUrl} // Use clean URL as key
-                  url={cleanUrl}
-                  width="100%"
-                  height="100%"
-                  playing={true}
-                  controls={true}
-                  onReady={handleReady}
-                  onError={handleError}
-                  config={playerConfig}
-                  playsinline
-                  stopOnUnmount
-                  pip={false}
-                />
+                {streamType === 'twitch' && channelName ? (
+                  <iframe
+                    src={`https://player.twitch.tv/?channel=${channelName}&parent=localhost&parent=${window.location.hostname}`}
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    allowFullScreen={true}
+                    scrolling="no"
+                    allow="autoplay; fullscreen"
+                    onLoad={handleReady}
+                    onError={handleError}
+                  />
+                ) : (
+                  <ReactPlayer
+                    key={cleanUrl} // Use clean URL as key
+                    url={cleanUrl}
+                    width="100%"
+                    height="100%"
+                    playing={true}
+                    controls={true}
+                    onReady={handleReady}
+                    onError={handleError}
+                    config={playerConfig}
+                    playsinline
+                    stopOnUnmount
+                    pip={false}
+                  />
+                )}
               </Suspense>
             </StreamErrorBoundary>
           </Box>
