@@ -12,7 +12,9 @@ import { useVirtualGridWithIntersection } from './VirtualStreamGrid'
 const extractYoutubeVideoId = (url: string): string | null => {
   try {
     const url_obj = new URL(url)
-    if (url_obj.hostname.includes('youtube.com')) {
+    // Only match youtube.com and its subdomains
+    const hostname = url_obj.hostname.toLowerCase();
+    if (hostname === 'youtube.com' || hostname.endsWith('.youtube.com')) {
       if (url_obj.pathname === '/watch') {
         return url_obj.searchParams.get('v')
       } else if (url_obj.pathname.startsWith('/live/')) {
@@ -20,7 +22,7 @@ const extractYoutubeVideoId = (url: string): string | null => {
       } else if (url_obj.pathname.startsWith('/embed/')) {
         return url_obj.pathname.split('/')[2]
       }
-    } else if (url_obj.hostname === 'youtu.be') {
+    } else if (hostname === 'youtu.be') {
       return url_obj.pathname.slice(1)
     }
   } catch (error) {
