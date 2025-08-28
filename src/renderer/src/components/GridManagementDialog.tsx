@@ -6,10 +6,8 @@ import {
   Grid,
   Card,
   CardContent,
-  CardActions,
   Typography,
   IconButton,
-  Button,
   Menu,
   MenuItem,
   ListItemIcon,
@@ -25,8 +23,7 @@ import {
   Delete,
   FileDownload,
   ContentCopy,
-  Search,
-  GridView
+  Search
 } from '@mui/icons-material'
 import { formatDistanceToNow } from 'date-fns'
 import { useStreamStore } from '../store/useStreamStore'
