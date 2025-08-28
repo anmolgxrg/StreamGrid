@@ -50,58 +50,54 @@ https://github.com/user-attachments/assets/1e098512-ed39-4094-ab13-84c144e60f7c
 
 ## 🚀 Getting Started
 
-### Option 1: Install from Releases
+### Option 1: Download Pre-built Application (Recommended)
 
-1. Visit the [Releases](https://github.com/LordKnish/StreamGrid/releases) section of the repository.
-2. Download the latest executable for your platform:
-   - **Windows**: `.exe`
-   - **macOS**: `.dmg`
-   - **Linux**: `.AppImage` or equivalent
-3. Run the executable and start using StreamGrid immediately.
+1. Visit the [Releases](https://github.com/LordKnish/StreamGrid/releases) section
+2. Download the latest version for your platform:
+   - **Windows**: `streamgrid-1.2.0-setup.exe`
+   - **macOS**: `streamgrid-1.2.0.dmg`
+   - **Linux**: `streamgrid-1.2.0.AppImage`
+3. Install and run StreamGrid
 
-### Option 2: Compile Yourself
+### Option 2: Build from Source
 
-Prerequisites:
-
+#### Prerequisites
 - Node.js 18.x or higher
 - npm 9.x or higher
 
-1. Clone the repository:
+#### Steps
+
+1. **Clone the repository**
 ```bash
-git clone https://github.com/LordKnish/streamgrid.git
-cd streamgrid
+git clone https://github.com/LordKnish/StreamGrid.git
+cd StreamGrid
 ```
 
-2. Install dependencies:
+2. **Install dependencies**
 ```bash
 npm install
 ```
 
-### Development
-
-Run the application in development mode:
+3. **Run in development mode** (for testing/development)
 ```bash
 npm run dev
 ```
 
-### Building
-
-Build for your current platform:
+4. **Build the application** (for production)
 ```bash
+# Build for your current platform
 npm run build
+
+# Or build for specific platforms:
+npm run build:win    # Windows
+npm run build:mac    # macOS
+npm run build:linux  # Linux
 ```
 
-Platform-specific builds:
-```bash
-# Windows
-npm run build:win
-
-# macOS
-npm run build:mac
-
-# Linux
-npm run build:linux
-```
+5. **Find your built application**
+   - Windows: `dist/streamgrid-1.2.0-setup.exe`
+   - macOS: `dist/streamgrid-1.2.0.dmg`
+   - Linux: `dist/streamgrid-1.2.0.AppImage`
 
 ## 🛠 Tech Stack
 
@@ -118,25 +114,41 @@ npm run build:linux
   - YouTube Player API integration
   - Twitch Player API integration
 - **Layout**: [React Grid Layout](https://github.com/react-grid-layout/react-grid-layout)
-- **Form Handling**: [React Hook Form](https://react-hook-form.com/)
 
 ## 🏗 Project Structure
 
 ```
-streamgrid/
+StreamGrid/
 ├── src/
-│   ├── main/           # Electron main process
-│   ├── preload/        # Preload scripts
-│   └── renderer/       # React application
-│       ├── src/
-│       │   ├── assets/     # Static assets
-│       │   ├── components/ # React components
-│       │   ├── store/      # Zustand store
-│       │   ├── types/      # TypeScript types
-│       │   └── utils/      # Utility functions
-│       └── index.html
-├── electron.vite.config.ts # Electron-vite configuration
-└── package.json
+│   ├── main/                 # Electron main process
+│   │   └── index.ts         # Main process entry point
+│   ├── preload/             # Preload scripts for IPC
+│   │   ├── index.ts         # Preload implementation
+│   │   └── index.d.ts       # TypeScript definitions
+│   ├── renderer/            # React application
+│   │   ├── src/
+│   │   │   ├── assets/      # Images, icons, styles
+│   │   │   ├── components/  # React components
+│   │   │   │   ├── StreamGrid.tsx
+│   │   │   │   ├── StreamCard.tsx
+│   │   │   │   └── ...
+│   │   │   ├── hooks/       # Custom React hooks
+│   │   │   ├── store/       # Zustand state management
+│   │   │   ├── types/       # TypeScript type definitions
+│   │   │   ├── workers/     # Web workers
+│   │   │   └── App.tsx      # Main React component
+│   │   └── index.html       # HTML entry point
+│   └── shared/              # Shared types between processes
+│       └── types/
+├── resources/               # Application resources
+│   ├── icon.png            # App icon
+│   └── icon.svg            # App icon (vector)
+├── dist/                   # Built applications (after build)
+├── out/                    # Compiled TypeScript (generated)
+├── electron-builder.yml    # Electron Builder configuration
+├── electron.vite.config.ts # Vite configuration
+├── package.json           # Project dependencies
+└── tsconfig.json          # TypeScript configuration
 ```
 
 ## 📋 Changelog
