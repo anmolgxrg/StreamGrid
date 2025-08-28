@@ -19,6 +19,16 @@ import { useStreamStore } from '../store/useStreamStore'
 // Lazy load ReactPlayer for better initial load time
 const ReactPlayer = lazy(() => import('react-player'))
 
+// Declare Twitch global
+declare global {
+  interface Window {
+    Twitch: {
+      Embed: new (elementId: string, options: any) => any
+      Player: any
+    }
+  }
+}
+
 // Helper function to detect stream type
 const extractYoutubeVideoId = (url: string): string | null => {
   try {
@@ -497,7 +507,7 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
               >
                 {streamType === 'twitch' && channelName ? (
                   <iframe
-                    src={`https://player.twitch.tv/?channel=${channelName}&parent=localhost&parent=${window.location.hostname}`}
+                    src={`https://player.twitch.tv/?channel=${channelName}&parent=localhost&muted=true`}
                     width="100%"
                     height="100%"
                     frameBorder="0"

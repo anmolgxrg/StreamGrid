@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, protocol } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
@@ -7,6 +7,11 @@ import https from 'https'
 import fs from 'fs/promises'
 import path from 'path'
 import type { SavedGrid, GridManifest } from '../shared/types/grid'
+
+// Register custom protocol for Twitch embeds
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'streamgrid', privileges: { secure: true, standard: true, corsEnabled: true } }
+])
 
 // Function to fetch latest GitHub release version
 async function getLatestGitHubVersion(): Promise<string> {
@@ -106,9 +111,56 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       devTools: true,
-      webSecurity: false // Disable web security to allow local file access
+      webSecurity: false, // Disable web security to allow local file access
+      allowRunningInsecureContent: true
     }
   })
+
+  // Intercept Twitch embed requests to add parent parameter
+  mainWindow.webContents.session.webRequest.onBeforeRequest(
+    {
+      urls: ['https://embed.twitch.tv/*channel=*']
+    },
+    (details, callback) => {
+      let redirectURL = details.url
+
+      const params = new URLSearchParams(redirectURL.replace('https://embed.twitch.tv/', ''))
+      if (params.get('parent') != '') {
+        callback({})
+        return
+      }
+      params.set('parent', 'localhost')
+      params.set('referrer', 'https://localhost/')
+
+      redirectURL = 'https://embed.twitch.tv/?' + params.toString()
+      console.log('Adjust Twitch embed URL to:', redirectURL)
+
+      callback({
+        cancel: false,
+        redirectURL
+      })
+    }
+  )
+
+  // Remove CSP headers for Twitch embeds
+  mainWindow.webContents.session.webRequest.onHeadersReceived(
+    {
+      urls: ['https://www.twitch.tv/*', 'https://player.twitch.tv/*', 'https://embed.twitch.tv/*']
+    },
+    (details, callback) => {
+      const responseHeaders = details.responseHeaders || {}
+
+      console.log('Removing CSP headers for:', details.url)
+
+      delete responseHeaders['Content-Security-Policy']
+      delete responseHeaders['content-security-policy']
+
+      callback({
+        cancel: false,
+        responseHeaders
+      })
+    }
+  )
 
   // Remove Content Security Policy since we've disabled web security for local file access
   // This allows local files to be loaded without CSP restrictions
