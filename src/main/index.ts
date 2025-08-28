@@ -4,6 +4,9 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.svg?asset'
 import https from 'https'
+import fs from 'fs/promises'
+import path from 'path'
+import type { SavedGrid, GridManifest } from '../shared/types/grid'
 
 // Function to fetch latest GitHub release version
 async function getLatestGitHubVersion(): Promise<string> {
@@ -165,7 +168,7 @@ function createWindow(): void {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Check for updates on app start
   if (!is.dev) {
     checkForUpdates()
@@ -199,6 +202,9 @@ app.whenReady().then(() => {
     }
   })
 
+  // Grid management setup
+  await setupGridManagement()
+
   createWindow()
 
   app.on('activate', function () {
@@ -207,6 +213,150 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
+
+// Grid management setup function
+async function setupGridManagement(): Promise<void> {
+  const gridsDir = path.join(app.getPath('userData'), 'grids')
+  const manifestPath = path.join(gridsDir, 'manifest.json')
+
+  // Ensure grids directory exists
+  await fs.mkdir(gridsDir, { recursive: true })
+
+  // Initialize manifest if it doesn't exist
+  try {
+    await fs.access(manifestPath)
+  } catch {
+    const initialManifest: GridManifest = {
+      version: '1.0.0',
+      currentGridId: null,
+      grids: []
+    }
+    await fs.writeFile(manifestPath, JSON.stringify(initialManifest, null, 2))
+  }
+
+  // Save grid handler
+  ipcMain.handle('save-grid', async (_, grid: SavedGrid) => {
+    try {
+      const fileName = `${grid.id}.json`
+      const filePath = path.join(gridsDir, fileName)
+
+      // Save grid file
+      await fs.writeFile(filePath, JSON.stringify(grid, null, 2))
+
+      // Update manifest
+      const manifestData = await fs.readFile(manifestPath, 'utf-8')
+      const manifest: GridManifest = JSON.parse(manifestData)
+
+      const existingIndex = manifest.grids.findIndex(g => g.id === grid.id)
+      const gridInfo = {
+        id: grid.id,
+        name: grid.name,
+        createdAt: grid.createdAt,
+        lastModified: grid.lastModified,
+        streamCount: grid.streams.length,
+        fileName
+      }
+
+      if (existingIndex >= 0) {
+        manifest.grids[existingIndex] = gridInfo
+      } else {
+        manifest.grids.push(gridInfo)
+      }
+
+      manifest.currentGridId = grid.id
+      await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2))
+    } catch (error) {
+      console.error('Error saving grid:', error)
+      throw error
+    }
+  })
+
+  // Load grid handler
+  ipcMain.handle('load-grid', async (_, gridId: string) => {
+    try {
+      const filePath = path.join(gridsDir, `${gridId}.json`)
+      const data = await fs.readFile(filePath, 'utf-8')
+      return JSON.parse(data) as SavedGrid
+    } catch (error) {
+      console.error('Error loading grid:', error)
+      return null
+    }
+  })
+
+  // Delete grid handler
+  ipcMain.handle('delete-grid', async (_, gridId: string) => {
+    try {
+      const filePath = path.join(gridsDir, `${gridId}.json`)
+      await fs.unlink(filePath)
+
+      // Update manifest
+      const manifestData = await fs.readFile(manifestPath, 'utf-8')
+      const manifest: GridManifest = JSON.parse(manifestData)
+      manifest.grids = manifest.grids.filter(g => g.id !== gridId)
+
+      if (manifest.currentGridId === gridId) {
+        manifest.currentGridId = null
+      }
+
+      await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2))
+    } catch (error) {
+      console.error('Error deleting grid:', error)
+      throw error
+    }
+  })
+
+  // Rename grid handler
+  ipcMain.handle('rename-grid', async (_, gridId: string, newName: string) => {
+    try {
+      const filePath = path.join(gridsDir, `${gridId}.json`)
+      const data = await fs.readFile(filePath, 'utf-8')
+      const grid: SavedGrid = JSON.parse(data)
+
+      grid.name = newName
+      grid.lastModified = new Date().toISOString()
+
+      await fs.writeFile(filePath, JSON.stringify(grid, null, 2))
+
+      // Update manifest
+      const manifestData = await fs.readFile(manifestPath, 'utf-8')
+      const manifest: GridManifest = JSON.parse(manifestData)
+      const gridIndex = manifest.grids.findIndex(g => g.id === gridId)
+
+      if (gridIndex >= 0) {
+        manifest.grids[gridIndex].name = newName
+        manifest.grids[gridIndex].lastModified = grid.lastModified
+      }
+
+      await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2))
+    } catch (error) {
+      console.error('Error renaming grid:', error)
+      throw error
+    }
+  })
+
+  // Get manifest handler
+  ipcMain.handle('get-grid-manifest', async () => {
+    try {
+      const data = await fs.readFile(manifestPath, 'utf-8')
+      return JSON.parse(data) as GridManifest
+    } catch (error) {
+      console.error('Error getting manifest:', error)
+      return null
+    }
+  })
+
+  // Get all grids handler
+  ipcMain.handle('get-all-grids', async () => {
+    try {
+      const data = await fs.readFile(manifestPath, 'utf-8')
+      const manifest: GridManifest = JSON.parse(data)
+      return manifest.grids
+    } catch (error) {
+      console.error('Error getting all grids:', error)
+      return []
+    }
+  })
+}
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
