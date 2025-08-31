@@ -1,0 +1,111 @@
+name: build-all-platforms
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: "20"
+  ELECTRON_CACHE: ~/.cache/electron
+  ELECTRON_BUILDER_CACHE: ~/.cache/electron-builder
+
+jobs:
+  mac-x64:
+    name: macOS x64
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+      - name: Install deps
+        run: npm ci
+      - name: Rebuild native deps (x64)
+        run: npx electron-builder install-app-deps --arch=x64
+      - name: Build (unsigned or signed)
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          TEAM_SHORT_ID: ${{ secrets.TEAM_SHORT_ID }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "true"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run dist:mac:x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-x64
+          path: dist/*mac-x64.*
+
+  mac-arm64:
+    name: macOS arm64
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+      - name: Install deps
+        run: npm ci
+      - name: Rebuild native deps (arm64)
+        run: npx electron-builder install-app-deps --arch=arm64
+      - name: Build (unsigned or signed)
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          TEAM_SHORT_ID: ${{ secrets.TEAM_SHORT_ID }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "true"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run dist:mac:arm64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-arm64
+          path: dist/*mac-arm64.*
+
+  windows-x64:
+    name: Windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+      - name: Install deps
+        run: npm ci
+      - name: Build (unsigned or code-signed)
+        env:
+          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run dist:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: dist/*-win-*.exe
+
+  linux-x64:
+    name: Linux x64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+      - name: Install deps
+        run: npm ci
+      - name: Build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run dist:linux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: |
+            dist/*linux-*.AppImage
+            dist/*linux-*.deb
