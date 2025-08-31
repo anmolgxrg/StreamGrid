@@ -1,6 +1,6 @@
 {
   "name": "streamgrid",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "A high-performance multi-stream viewer application for watching multiple live streams simultaneously in customizable grid layouts",
   "main": "./out/main/index.js",
   "author": "LordKnish",
@@ -43,6 +43,8 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.4.1",
     "@mui/material": "^6.4.1",
+    "@types/express": "^5.0.3",
+    "@types/fluent-ffmpeg": "^2.1.27",
     "@types/lodash": "^4.17.20",
     "@types/uuid": "^10.0.0",
     "comlink": "^4.4.2",
@@ -50,6 +52,8 @@
     "dashjs": "^4.7.4",
     "date-fns": "^4.1.0",
     "electron-updater": "^6.1.7",
+    "express": "^5.1.0",
+    "fluent-ffmpeg": "^2.1.3",
     "hls.js": "^1.5.20",
     "jdenticon": "^3.3.0",
     "lodash": "^4.17.21",
@@ -101,7 +105,10 @@
     "asar": true,
     "mac": {
       "category": "public.app-category.video",
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "hardenedRuntime": true,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
@@ -115,7 +122,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "artifactName": "${productName}-${version}-win-${arch}.${ext}",
@@ -127,7 +136,10 @@
       "allowToChangeInstallationDirectory": false
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "category": "Video",
       "artifactName": "${productName}-${version}-linux-${arch}.${ext}",
       "icon": "build/icons"

@@ -52,7 +52,7 @@ const extractYoutubeVideoId = (url: string): string | null => {
   return null
 }
 
-const detectStreamType = (url: string): 'hls' | 'dash' | 'youtube' | 'twitch' | 'local' | 'other' => {
+const detectStreamType = (url: string): 'hls' | 'dash' | 'youtube' | 'twitch' | 'rtsp' | 'local' | 'other' => {
   // Check for local file first
   if (url.startsWith('file://')) {
     return 'local'
@@ -75,7 +75,15 @@ const detectStreamType = (url: string): 'hls' | 'dash' | 'youtube' | 'twitch' | 
     // Twitch channel URLs
     /^(https?:\/\/)?(www\.)?twitch\.tv\/([a-zA-Z0-9_]{4,25})/i
   ]
+  const rtspPatterns = [
+    // RTSP URLs
+    /^rtsp:\/\//i,
+    /^rtsps:\/\//i
+  ]
 
+  if (rtspPatterns.some((pattern) => pattern.test(url))) {
+    return 'rtsp'
+  }
   if (hlsPatterns.some((pattern) => pattern.test(url))) {
     return 'hls'
   }
@@ -161,6 +169,7 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [logoUrl, setLogoUrl] = useState<string>('')
+  const [rtspUrl, setRtspUrl] = useState<string | null>(null)
   const errorTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Generate avatar data URL if no logo URL is provided
@@ -213,7 +222,7 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
     setLogoUrl(stream.logoUrl || generatedAvatarUrl || '')
   }, [stream.logoUrl, generatedAvatarUrl])
 
-  const handlePlay = useCallback((): void => {
+  const handlePlay = useCallback(async (): Promise<void> => {
     // Reset state before playing
     setIsPlaying(false)
     setError(null)
@@ -223,23 +232,63 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
       errorTimerRef.current = null
     }
 
-    // Start playing in next tick
-    setTimeout(() => {
-      console.log('Attempting to play stream:', cleanUrl)
-      setIsPlaying(true)
+    // Handle RTSP streams
+    if (streamType === 'rtsp') {
       setIsLoading(true)
-    }, 0)
-  }, [cleanUrl])
+      try {
+        // Check if FFmpeg is available
+        const ffmpegCheck = await window.api.rtspCheckFfmpeg()
+        if (!ffmpegCheck.available) {
+          setError('FFmpeg not found. Please install FFmpeg to play RTSP streams.')
+          setIsLoading(false)
+          return
+        }
 
-  const handleStop = useCallback((): void => {
+        // Start RTSP transcoding
+        const result = await window.api.rtspStartStream(stream.id, stream.streamUrl)
+        if (result.success && result.url) {
+          setRtspUrl(result.url)
+          setIsPlaying(true)
+          setIsLoading(true)
+        } else {
+          setError(result.error || 'Failed to start RTSP stream')
+          setIsLoading(false)
+        }
+      } catch (err) {
+        console.error('Error starting RTSP stream:', err)
+        setError('Failed to start RTSP stream')
+        setIsLoading(false)
+      }
+    } else {
+      // Start playing in next tick for non-RTSP streams
+      setTimeout(() => {
+        console.log('Attempting to play stream:', cleanUrl)
+        setIsPlaying(true)
+        setIsLoading(true)
+      }, 0)
+    }
+  }, [cleanUrl, streamType, stream.id, stream.streamUrl])
+
+  const handleStop = useCallback(async (): Promise<void> => {
     setIsPlaying(false)
     setError(null)
     if (errorTimerRef.current) {
       clearTimeout(errorTimerRef.current)
       errorTimerRef.current = null
     }
+
+    // Stop RTSP transcoding if it's an RTSP stream
+    if (streamType === 'rtsp') {
+      try {
+        await window.api.rtspStopStream(stream.id)
+      } catch (err) {
+        console.error('Error stopping RTSP stream:', err)
+      }
+      setRtspUrl(null)
+    }
+
     removeChatsForStream(stream.id)
-  }, [stream.id, removeChatsForStream])
+  }, [stream.id, removeChatsForStream, streamType])
 
   const handleReady = useCallback(() => {
     console.log('Stream ready:', cleanUrl)
@@ -270,14 +319,20 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
     }, 15000)
   }, [cleanUrl])
 
-  // Cleanup timer on unmount
+  // Cleanup timer and RTSP stream on unmount
   React.useEffect(() => {
     return (): void => {
       if (errorTimerRef.current) {
         clearTimeout(errorTimerRef.current)
       }
+      // Stop RTSP stream if component unmounts while playing
+      if (streamType === 'rtsp' && isPlaying) {
+        window.api.rtspStopStream(stream.id).catch(err => {
+          console.error('Error stopping RTSP stream on unmount:', err)
+        })
+      }
     }
-  }, [])
+  }, [streamType, isPlaying, stream.id])
 
   return (
     <Card
@@ -519,15 +574,15 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
                   />
                 ) : (
                   <ReactPlayer
-                    key={cleanUrl} // Use clean URL as key
-                    url={cleanUrl}
+                    key={streamType === 'rtsp' ? rtspUrl : cleanUrl} // Use RTSP URL for RTSP streams
+                    url={streamType === 'rtsp' ? rtspUrl || '' : cleanUrl}
                     width="100%"
                     height="100%"
                     playing={true}
                     controls={true}
                     onReady={handleReady}
                     onError={handleError}
-                    config={playerConfig}
+                    config={streamType === 'rtsp' ? { file: HLS_CONFIG } : playerConfig}
                     playsinline
                     stopOnUnmount
                     pip={false}

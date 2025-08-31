@@ -7,6 +7,7 @@ import https from 'https'
 import fs from 'fs/promises'
 import path from 'path'
 import type { SavedGrid, GridManifest } from '../shared/types/grid'
+import { rtspService } from './rtspService'
 
 // Register custom protocol for Twitch embeds
 protocol.registerSchemesAsPrivileged([
@@ -259,6 +260,36 @@ app.whenReady().then(async () => {
       return { filePath, fileUrl }
     }
     return null
+  })
+
+  // RTSP handlers
+  ipcMain.handle('rtsp-start-stream', async (_, streamId: string, rtspUrl: string) => {
+    try {
+      const result = await rtspService.startStream(streamId, rtspUrl)
+      return { success: true, ...result }
+    } catch (error) {
+      console.error('Error starting RTSP stream:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  ipcMain.handle('rtsp-stop-stream', async (_, streamId: string) => {
+    try {
+      rtspService.stopStream(streamId)
+      return { success: true }
+    } catch (error) {
+      console.error('Error stopping RTSP stream:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  ipcMain.handle('rtsp-check-ffmpeg', async () => {
+    try {
+      const available = await rtspService.checkFfmpegAvailable()
+      return { available }
+    } catch (error) {
+      return { available: false }
+    }
   })
 
   // Grid management setup

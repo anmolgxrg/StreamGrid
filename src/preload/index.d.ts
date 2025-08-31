@@ -16,6 +16,10 @@ declare global {
       renameGrid: (gridId: string, newName: string) => Promise<void>
       getGridManifest: () => Promise<GridManifest>
       getAllGrids: () => Promise<Array<{ id: string; name: string; lastModified: string; streamCount: number }>>
+      // RTSP streaming APIs
+      rtspStartStream: (streamId: string, rtspUrl: string) => Promise<{ success: boolean; url?: string; port?: number; error?: string }>
+      rtspStopStream: (streamId: string) => Promise<{ success: boolean; error?: string }>
+      rtspCheckFfmpeg: () => Promise<{ available: boolean }>
       // App lifecycle events
       onAppBeforeQuit: (callback: () => void) => () => void
     }
