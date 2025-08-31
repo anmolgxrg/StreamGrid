@@ -9,9 +9,8 @@ import React, {
   useEffect,
   useMemo
 } from 'react'
-import PropTypes from 'prop-types'
 import { Card, IconButton, Typography, Box, CircularProgress } from '@mui/material'
-import { PlayArrow, Stop, Close, Edit, Chat } from '@mui/icons-material'
+import { PlayArrow, Stop, Close, Edit, Chat, AspectRatio, CropFree } from '@mui/icons-material'
 import { Stream } from '../types/stream'
 import { StreamErrorBoundary } from './StreamErrorBoundary'
 import { useStreamStore } from '../store/useStreamStore'
@@ -164,13 +163,14 @@ interface StreamCardProps {
 }
 
 const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, onAddChat }) => {
-  const { removeChatsForStream } = useStreamStore()
+  const { removeChatsForStream, updateStream } = useStreamStore()
   const [isPlaying, setIsPlaying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [logoUrl, setLogoUrl] = useState<string>('')
   const [rtspUrl, setRtspUrl] = useState<string | null>(null)
   const errorTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const currentFitMode = stream.fitMode || 'contain'
 
   // Generate avatar data URL if no logo URL is provided
   const generatedAvatarUrl = useMemo(() => {
@@ -334,6 +334,11 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
     }
   }, [streamType, isPlaying, stream.id])
 
+  const handleToggleFitMode = useCallback(() => {
+    const newFitMode = currentFitMode === 'contain' ? 'cover' : 'contain'
+    updateStream(stream.id, { fitMode: newFitMode })
+  }, [currentFitMode, stream.id, updateStream])
+
   return (
     <Card
       sx={{
@@ -380,6 +385,22 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
           {isPlaying && (
             <>
+              <IconButton
+                onClick={handleToggleFitMode}
+                sx={{
+                  backgroundColor: currentFitMode === 'cover' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.4)',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: currentFitMode === 'cover' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.6)',
+                    color: 'primary.main'
+                  },
+                  padding: '4px'
+                }}
+                size="small"
+                title={currentFitMode === 'contain' ? 'Switch to Fill Mode' : 'Switch to Fit Mode'}
+              >
+                {currentFitMode === 'contain' ? <CropFree fontSize="small" /> : <AspectRatio fontSize="small" />}
+              </IconButton>
               <IconButton
                 onClick={handleStop}
                 sx={{
@@ -561,32 +582,81 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
                 }
               >
                 {streamType === 'twitch' && channelName ? (
-                  <iframe
-                    src={`https://player.twitch.tv/?channel=${channelName}&parent=localhost&muted=true`}
-                    width="100%"
-                    height="100%"
-                    frameBorder="0"
-                    allowFullScreen={true}
-                    scrolling="no"
-                    allow="autoplay; fullscreen"
-                    onLoad={handleReady}
-                    onError={handleError}
-                  />
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: '100%',
+                      position: 'relative',
+                      overflow: currentFitMode === 'contain' ? 'visible' : 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      '& iframe': {
+                        width: currentFitMode === 'contain' ? '100%' : '100%',
+                        height: currentFitMode === 'contain' ? '100%' : '100%',
+                        transform: currentFitMode === 'cover' ? 'scale(1.35)' : 'none',
+                        transformOrigin: 'center'
+                      }
+                    }}
+                  >
+                    <iframe
+                      src={`https://player.twitch.tv/?channel=${channelName}&parent=localhost&muted=true`}
+                      width="100%"
+                      height="100%"
+                      frameBorder="0"
+                      allowFullScreen={true}
+                      scrolling="no"
+                      allow="autoplay; fullscreen"
+                      onLoad={handleReady}
+                      onError={handleError}
+                    />
+                  </Box>
                 ) : (
-                  <ReactPlayer
-                    key={streamType === 'rtsp' ? rtspUrl : cleanUrl} // Use RTSP URL for RTSP streams
-                    url={streamType === 'rtsp' ? rtspUrl || '' : cleanUrl}
-                    width="100%"
-                    height="100%"
-                    playing={true}
-                    controls={true}
-                    onReady={handleReady}
-                    onError={handleError}
-                    config={streamType === 'rtsp' ? { file: HLS_CONFIG } : playerConfig}
-                    playsinline
-                    stopOnUnmount
-                    pip={false}
-                  />
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: '100%',
+                      position: 'relative',
+                      overflow: currentFitMode === 'contain' ? 'visible' : 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#000',
+                      '& > div': {
+                        width: currentFitMode === 'cover' ? '135%' : '100%',
+                        height: currentFitMode === 'cover' ? '135%' : '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      },
+                      '& video': {
+                        objectFit: currentFitMode,
+                        width: '100%',
+                        height: '100%',
+                        maxWidth: currentFitMode === 'contain' ? '100%' : 'none',
+                        maxHeight: currentFitMode === 'contain' ? '100%' : 'none'
+                      },
+                      '& iframe': {
+                        transform: currentFitMode === 'cover' ? 'scale(1.35)' : 'none',
+                        transformOrigin: 'center'
+                      }
+                    }}
+                  >
+                    <ReactPlayer
+                      key={streamType === 'rtsp' ? rtspUrl : cleanUrl} // Use RTSP URL for RTSP streams
+                      url={streamType === 'rtsp' ? rtspUrl || '' : cleanUrl}
+                      width="100%"
+                      height="100%"
+                      playing={true}
+                      controls={true}
+                      onReady={handleReady}
+                      onError={handleError}
+                      config={streamType === 'rtsp' ? { file: HLS_CONFIG } : playerConfig}
+                      playsinline
+                      stopOnUnmount
+                      pip={false}
+                    />
+                  </Box>
                 )}
               </Suspense>
             </StreamErrorBoundary>
@@ -644,17 +714,5 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
 })
 
 StreamCard.displayName = 'StreamCard'
-
-StreamCard.propTypes = {
-  stream: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-    streamUrl: PropTypes.string.isRequired,
-    logoUrl: PropTypes.string.isRequired
-  }).isRequired,
-  onRemove: PropTypes.func.isRequired,
-  onEdit: PropTypes.func.isRequired,
-  onAddChat: PropTypes.func
-}
 
 export { StreamCard }
