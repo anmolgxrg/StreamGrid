@@ -97,6 +97,11 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
           return 'Local File'
         }
 
+        // Check for RTSP
+        if (url.toLowerCase().startsWith('rtsp://') || url.toLowerCase().startsWith('rtsps://')) {
+          return 'RTSP Stream'
+        }
+
         const { type } = extractStreamInfo(url)
         if (type) return type
 
@@ -154,10 +159,12 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
   )
 
   const isValid = useCallback((): boolean => {
+    const isRtspUrl = formData.streamUrl.toLowerCase().startsWith('rtsp://') ||
+                      formData.streamUrl.toLowerCase().startsWith('rtsps://')
     return (
       formData.name.length >= 2 &&
       (formData.logoUrl.length === 0 || isValidImageUrl(formData.logoUrl)) &&
-      (ReactPlayer.canPlay(formData.streamUrl) || formData.streamUrl.startsWith('file://'))
+      (ReactPlayer.canPlay(formData.streamUrl) || formData.streamUrl.startsWith('file://') || isRtspUrl)
     )
   }, [formData, isValidImageUrl])
 
@@ -426,8 +433,9 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
                   }
                 }
 
+                const isRtspUrl = cleanUrl.toLowerCase().startsWith('rtsp://') || cleanUrl.toLowerCase().startsWith('rtsps://')
                 setFormData((prev) => ({ ...prev, streamUrl: cleanUrl }))
-                if (ReactPlayer.canPlay(cleanUrl) || cleanUrl.startsWith('file://')) {
+                if (ReactPlayer.canPlay(cleanUrl) || cleanUrl.startsWith('file://') || isRtspUrl) {
                   setStreamPreview(cleanUrl)
                   setStreamType(streamType)
 
@@ -464,10 +472,10 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
                   setStreamType('')
                 }
               }}
-              error={formData.streamUrl.length > 0 && !ReactPlayer.canPlay(formData.streamUrl) && !formData.streamUrl.startsWith('file://')}
+              error={formData.streamUrl.length > 0 && !ReactPlayer.canPlay(formData.streamUrl) && !formData.streamUrl.startsWith('file://') && !formData.streamUrl.toLowerCase().startsWith('rtsp://') && !formData.streamUrl.toLowerCase().startsWith('rtsps://')}
               helperText={
                 formData.streamUrl.length > 0
-                  ? !ReactPlayer.canPlay(formData.streamUrl) && !formData.streamUrl.startsWith('file://')
+                  ? !ReactPlayer.canPlay(formData.streamUrl) && !formData.streamUrl.startsWith('file://') && !formData.streamUrl.toLowerCase().startsWith('rtsp://') && !formData.streamUrl.toLowerCase().startsWith('rtsps://')
                     ? 'Invalid stream URL'
                     : streamType
                       ? `Stream Type: ${streamType}`

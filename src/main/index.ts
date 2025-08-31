@@ -165,6 +165,24 @@ function createWindow(): void {
 
   // Remove Content Security Policy since we've disabled web security for local file access
   // This allows local files to be loaded without CSP restrictions
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    const responseHeaders = details.responseHeaders || {}
+
+    // Modify CSP to allow blob URLs
+    if (responseHeaders['content-security-policy'] || responseHeaders['Content-Security-Policy']) {
+      const cspHeader = responseHeaders['content-security-policy'] || responseHeaders['Content-Security-Policy']
+      if (cspHeader && Array.isArray(cspHeader)) {
+        // Add blob: to the CSP if it's not already there
+        cspHeader[0] = cspHeader[0].replace(/default-src ([^;]+)/, 'default-src $1 blob:')
+        cspHeader[0] = cspHeader[0].replace(/media-src ([^;]+)/, 'media-src $1 blob: data: file:')
+      }
+    }
+
+    callback({
+      cancel: false,
+      responseHeaders
+    })
+  })
 
   // Add right-click menu for inspect element
   mainWindow.webContents.on('context-menu', (_, props): void => {
