@@ -196,68 +196,77 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
         return
       }
 
-      // Prevent default paste behavior
-      e.preventDefault()
+      // Get the target element and its ID
+      const target = e.target as HTMLInputElement
+      const targetId = target.id
 
-      // Only handle paste in the field where the paste event occurred
-      const targetId = (e.target as HTMLElement).id
-      if (targetId === 'logo-url' && isValidImageUrl(pastedText)) {
-        setFormData((prev) => ({ ...prev, logoUrl: pastedText }))
-        trySetLogoPreview(pastedText)
-      } else if (targetId === 'stream-url' && ReactPlayer.canPlay(pastedText)) {
-        // Clear any existing value first
-        setFormData((prev) => ({ ...prev, streamUrl: '' }))
-        setStreamPreview('')
-
-        // Clean up URL and set new value
-        const streamType = detectStreamType(pastedText)
-        let cleanUrl = pastedText
-
-        if (streamType === 'YouTube' || streamType === 'Twitch') {
-          const { type, id } = extractStreamInfo(pastedText)
-          if (id) {
-            cleanUrl =
-              type === 'YouTube'
-                ? `https://www.youtube.com/watch?v=${id}`
-                : `https://www.twitch.tv/${id}`
+      // For logo URL field
+      if (targetId === 'logo-url') {
+        // Don't prevent default - let the paste happen normally
+        // Then check if it's a valid image URL after a short delay
+        setTimeout(() => {
+          if (isValidImageUrl(pastedText)) {
+            trySetLogoPreview(pastedText)
           }
-        }
+        }, 0)
+      }
+      // For stream URL field
+      else if (targetId === 'stream-url') {
+        // Only prevent default and handle special logic if it's a valid stream URL
+        if (ReactPlayer.canPlay(pastedText)) {
+          e.preventDefault()
 
-        setFormData((prev) => ({ ...prev, streamUrl: cleanUrl }))
-        setStreamPreview(cleanUrl)
-        setStreamType(streamType)
+          // Clean up URL and set new value
+          const streamType = detectStreamType(pastedText)
+          let cleanUrl = pastedText
 
-        // Only auto-populate when adding a new stream
-        if (!editStream) {
-          const { type, id } = extractStreamInfo(cleanUrl)
-          if (id) {
-            if (type === 'YouTube') {
-              // Set YouTube thumbnail and title
-              const thumbnailUrl = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
-              setFormData((prev) => ({ ...prev, logoUrl: thumbnailUrl }))
-              trySetLogoPreview(thumbnailUrl)
+          if (streamType === 'YouTube' || streamType === 'Twitch') {
+            const { type, id } = extractStreamInfo(pastedText)
+            if (id) {
+              cleanUrl =
+                type === 'YouTube'
+                  ? `https://www.youtube.com/watch?v=${id}`
+                  : `https://www.twitch.tv/${id}`
+            }
+          }
 
-              fetchYouTubeTitle(id).then((title) => {
-                if (title) {
-                  setFormData((prev) => ({ ...prev, name: title }))
-                }
-              })
-            } else if (type === 'Twitch') {
-              // Set Twitch channel name as title and live preview image
-              setFormData((prev) => ({
-                ...prev,
-                name: id,
-                logoUrl: `https://static-cdn.jtvnw.net/previews-ttv/live_user_${id}-1920x1080.jpg`
-              }))
-              trySetLogoPreview(
-                `https://static-cdn.jtvnw.net/previews-ttv/live_user_${id}-1920x1080.jpg`
-              )
+          setFormData((prev) => ({ ...prev, streamUrl: cleanUrl }))
+          setStreamPreview(cleanUrl)
+          setStreamType(streamType)
+
+          // Only auto-populate when adding a new stream
+          if (!editStream) {
+            const { type, id } = extractStreamInfo(cleanUrl)
+            if (id) {
+              if (type === 'YouTube') {
+                // Set YouTube thumbnail and title
+                const thumbnailUrl = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
+                setFormData((prev) => ({ ...prev, logoUrl: thumbnailUrl }))
+                trySetLogoPreview(thumbnailUrl)
+
+                fetchYouTubeTitle(id).then((title) => {
+                  if (title) {
+                    setFormData((prev) => ({ ...prev, name: title }))
+                  }
+                })
+              } else if (type === 'Twitch') {
+                // Set Twitch channel name as title and live preview image
+                setFormData((prev) => ({
+                  ...prev,
+                  name: id,
+                  logoUrl: `https://static-cdn.jtvnw.net/previews-ttv/live_user_${id}-1920x1080.jpg`
+                }))
+                trySetLogoPreview(
+                  `https://static-cdn.jtvnw.net/previews-ttv/live_user_${id}-1920x1080.jpg`
+                )
+              }
             }
           }
         }
+        // If it's not a valid stream URL, let the default paste behavior happen
       }
     },
-    [isValidImageUrl, trySetLogoPreview, detectStreamType, editStream, fetchYouTubeTitle]
+    [isValidImageUrl, trySetLogoPreview, detectStreamType, editStream, fetchYouTubeTitle, extractStreamInfo]
   )
 
   const handleKeyDown = useCallback(
