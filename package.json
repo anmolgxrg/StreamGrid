@@ -1,6 +1,6 @@
 {
   "name": "streamgrid",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "A high-performance multi-stream viewer application for watching multiple live streams simultaneously in customizable grid layouts",
   "main": "./out/main/index.js",
   "author": "LordKnish",
@@ -30,10 +30,11 @@
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
-    "build:unpack": "npm run build && electron-builder --dir",
-    "build:win": "npm run build && electron-builder --win",
-    "build:mac": "npm run build && electron-builder --mac",
-    "build:linux": "npm run build && electron-builder --linux"
+    "dist:mac:x64": "npm run build && electron-builder --mac dmg zip --x64",
+    "dist:mac:arm64": "npm run build && electron-builder --mac dmg zip --arm64",
+    "dist:win": "npm run build && electron-builder --win nsis --x64",
+    "dist:linux": "npm run build && electron-builder --linux AppImage deb --x64",
+    "build:unpack": "npm run build && electron-builder --dir"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
@@ -84,5 +85,60 @@
     "typescript": "^5.5.2",
     "vite": "^5.3.1",
     "vitest": "^3.2.4"
+  },
+  "build": {
+    "appId": "io.streamgrid.app",
+    "productName": "StreamGrid",
+    "files": [
+      "out/",
+      "resources/**",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "asar": true,
+    "mac": {
+      "category": "public.app-category.video",
+      "target": ["dmg", "zip"],
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "artifactName": "${productName}-${version}-mac-${arch}.${ext}",
+      "icon": "build/icons/icon.icns"
+    },
+    "dmg": {
+      "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "${productName}-${version}-win-${arch}.${ext}",
+      "icon": "build/icons/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Video",
+      "artifactName": "${productName}-${version}-linux-${arch}.${ext}",
+      "icon": "build/icons"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "LordKnish",
+        "repo": "StreamGrid",
+        "releaseType": "draft"
+      }
+    ]
   }
 }
