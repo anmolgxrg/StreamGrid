@@ -1,0 +1,16 @@
+fix: resolve Linux build failures and improve release workflow
+
+- Fix 7zip extraction error in Linux builds by using system fpm
+- Add proper Debian package metadata (author email, maintainer)
+- Install required system dependencies (ruby, build-essential, fpm)
+- Clear electron-builder cache to prevent corruption
+- Disable electron-builder publishing in favor of dedicated release job
+- Add separate GitHub release job for better control and reliability
+- Change release type from draft to release to avoid conflicts
+
+The Linux build was failing with "ERROR: No more files" when electron-builder
+tried to extract the fpm tool. This is resolved by installing fpm via Ruby
+gems and using USE_SYSTEM_FPM=true environment variable.
+
+All platform builds now use --publish never, with a dedicated release job
+that creates a draft GitHub release with all artifacts attached.

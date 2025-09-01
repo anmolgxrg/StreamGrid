@@ -34,7 +34,7 @@ jobs:
           TEAM_SHORT_ID: ${{ secrets.TEAM_SHORT_ID }}
           CSC_IDENTITY_AUTO_DISCOVERY: "true"
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run dist:mac:x64
+        run: npx electron-builder --mac dmg zip --x64 --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: mac-x64
@@ -60,7 +60,7 @@ jobs:
           TEAM_SHORT_ID: ${{ secrets.TEAM_SHORT_ID }}
           CSC_IDENTITY_AUTO_DISCOVERY: "true"
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run dist:mac:arm64
+        run: npx electron-builder --mac dmg zip --arm64 --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: mac-arm64
@@ -82,7 +82,7 @@ jobs:
           CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run dist:win
+        run: npx electron-builder --win nsis --x64 --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: windows-x64
@@ -97,15 +97,41 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby-full build-essential rpm
+      - name: Install system fpm
+        run: sudo gem install --no-document fpm
       - name: Install deps
         run: npm ci
-      - name: Build
+      - name: Build Linux (AppImage + deb)
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run dist:linux
+          USE_SYSTEM_FPM: "true"
+        run: npx electron-builder --linux AppImage deb --x64 --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: linux-x64
           path: |
             dist/*linux-*.AppImage
             dist/*linux-*.deb
+
+  release:
+    name: Create GitHub Release
+    needs: [mac-x64, mac-arm64, windows-x64, linux-x64]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Create/Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: |
+            dist/**/StreamGrid-*.dmg
+            dist/**/StreamGrid-*.zip
+            dist/**/StreamGrid-*-win-*.exe
+            dist/**/StreamGrid-*-linux-*.AppImage
+            dist/**/StreamGrid-*-linux-*.deb

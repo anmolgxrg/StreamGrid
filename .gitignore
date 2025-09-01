@@ -6,7 +6,6 @@ node_modules
 # Production
 dist
 out
-build
 release
 
 # Testing

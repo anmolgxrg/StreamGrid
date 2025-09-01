@@ -3,7 +3,10 @@
   "version": "1.2.3",
   "description": "A high-performance multi-stream viewer application for watching multiple live streams simultaneously in customizable grid layouts",
   "main": "./out/main/index.js",
-  "author": "LordKnish",
+  "author": {
+    "name": "LordKnish",
+    "email": "lordknish@example.com"
+  },
   "homepage": "https://github.com/LordKnish/StreamGrid",
   "repository": {
     "type": "git",
@@ -142,14 +145,32 @@
       ],
       "category": "Video",
       "artifactName": "${productName}-${version}-linux-${arch}.${ext}",
-      "icon": "build/icons"
+      "icon": "build/icons",
+      "compression": "normal",
+      "executableArgs": [
+        "--no-sandbox"
+      ],
+      "maintainer": "LordKnish <lordknish@example.com>"
+    },
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0"
+      ]
     },
     "publish": [
       {
         "provider": "github",
         "owner": "LordKnish",
         "repo": "StreamGrid",
-        "releaseType": "draft"
+        "releaseType": "release"
       }
     ]
   }
