@@ -146,13 +146,13 @@
       "category": "Video",
       "artifactName": "${productName}-${version}-linux-${arch}.${ext}",
       "icon": "build/icons",
-      "compression": "normal",
       "executableArgs": [
         "--no-sandbox"
       ],
       "maintainer": "LordKnish <support@streamgrid.app>"
     },
     "deb": {
+      "compression": "gz",
       "depends": [
         "libgtk-3-0",
         "libnotify4",
