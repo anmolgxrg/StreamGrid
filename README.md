@@ -36,6 +36,7 @@ https://github.com/user-attachments/assets/1e098512-ed39-4094-ab13-84c144e60f7c
   - **Local Files** (New in v1.2.0): Play video files directly from your computer
   - **YouTube**: Support for standard videos, live streams, and shorts
   - **Twitch**: Support for channel live streams
+  - **RTSP Streams** (New in v1.2.1): Support for RTSP/RTSPS camera and streaming sources
   - **HLS Support**: Compatible with HTTP Live Streaming (HLS) video sources
   - **MPEG-DASH Support**: Compatible with Dynamic Adaptive Streaming over HTTP (DASH) video sources
 - **Chat Integration**:
@@ -64,6 +65,7 @@ https://github.com/user-attachments/assets/1e098512-ed39-4094-ab13-84c144e60f7c
 #### Prerequisites
 - Node.js 18.x or higher
 - npm 9.x or higher
+- FFmpeg (required for RTSP streaming support)
 
 #### Steps
 
@@ -98,6 +100,47 @@ npm run build:linux  # Linux
    - Windows: `dist/streamgrid-1.2.0-setup.exe`
    - macOS: `dist/streamgrid-1.2.0.dmg`
    - Linux: `dist/streamgrid-1.2.0.AppImage`
+
+## 📹 RTSP Streaming Support
+
+StreamGrid supports RTSP (Real Time Streaming Protocol) streams, commonly used for IP cameras and professional streaming equipment. To use RTSP streams, you need to have FFmpeg installed on your system.
+
+### Installing FFmpeg
+
+#### Windows
+1. Download FFmpeg from [ffmpeg.org](https://ffmpeg.org/download.html)
+2. Extract the archive to a folder (e.g., `C:\ffmpeg`)
+3. Add FFmpeg to your PATH:
+   - Open System Properties → Advanced → Environment Variables
+   - Add the FFmpeg bin folder (e.g., `C:\ffmpeg\bin`) to your PATH
+
+#### macOS
+```bash
+# Using Homebrew
+brew install ffmpeg
+```
+
+#### Linux
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install ffmpeg
+
+# Fedora
+sudo dnf install ffmpeg
+
+# Arch Linux
+sudo pacman -S ffmpeg
+```
+
+### Using RTSP Streams
+
+Simply add an RTSP URL like any other stream:
+- Format: `rtsp://username:password@ip:port/path`
+- Example: `rtsp://admin:12345@192.168.1.100:554/stream1`
+- Secure RTSP: `rtsps://camera.example.com/live`
+
+StreamGrid will automatically detect RTSP URLs and handle the transcoding transparently.
 
 ## 🛠 Tech Stack
 
