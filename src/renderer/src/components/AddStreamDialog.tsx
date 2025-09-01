@@ -204,12 +204,16 @@ export const AddStreamDialog: React.FC<AddStreamDialogProps> = ({
       // For logo URL field
       if (targetId === 'logo-url') {
         // Don't prevent default - let the paste happen normally
-        // Then check if it's a valid image URL after a short delay
-        setTimeout(() => {
-          if (isValidImageUrl(pastedText)) {
-            trySetLogoPreview(pastedText)
+        // Validate the pasted value on the next input event
+        const handleLogoUrlInput = (event: Event) => {
+          const input = event.target as HTMLInputElement;
+          const value = input.value;
+          if (isValidImageUrl(value)) {
+            trySetLogoPreview(value);
           }
-        }, 0)
+          input.removeEventListener('input', handleLogoUrlInput);
+        };
+        target.addEventListener('input', handleLogoUrlInput);
       }
       // For stream URL field
       else if (targetId === 'stream-url') {
