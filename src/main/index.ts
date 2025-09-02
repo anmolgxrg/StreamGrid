@@ -129,8 +129,10 @@ function createWindow(): void {
         callback({})
         return
       }
-      params.set('parent', 'localhost')
-      params.set('referrer', 'https://localhost/')
+      // Set parent to localhost with port for development, or just localhost for production
+      const parentDomain = is.dev ? 'localhost:4000' : 'localhost'
+      params.set('parent', parentDomain)
+      params.set('referrer', `https://${parentDomain}/`)
 
       redirectURL = 'https://embed.twitch.tv/?' + params.toString()
       console.log('Adjust Twitch embed URL to:', redirectURL)
@@ -142,7 +144,7 @@ function createWindow(): void {
     }
   )
 
-  // Remove CSP headers for Twitch embeds
+  // Remove CSP headers for Twitch embeds and modify frame-ancestors
   mainWindow.webContents.session.webRequest.onHeadersReceived(
     {
       urls: ['https://www.twitch.tv/*', 'https://player.twitch.tv/*', 'https://embed.twitch.tv/*']
@@ -150,8 +152,9 @@ function createWindow(): void {
     (details, callback) => {
       const responseHeaders = details.responseHeaders || {}
 
-      console.log('Removing CSP headers for:', details.url)
+      console.log('Processing CSP headers for:', details.url)
 
+      // Remove CSP headers that block embedding
       delete responseHeaders['Content-Security-Policy']
       delete responseHeaders['content-security-policy']
 
