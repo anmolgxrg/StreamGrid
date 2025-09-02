@@ -119,23 +119,25 @@ function createWindow(): void {
   // Intercept Twitch embed requests to add parent parameter
   mainWindow.webContents.session.webRequest.onBeforeRequest(
     {
-      urls: ['https://embed.twitch.tv/*channel=*']
+      urls: ['https://player.twitch.tv/*', 'https://embed.twitch.tv/*']
     },
     (details, callback) => {
       let redirectURL = details.url
 
-      const params = new URLSearchParams(redirectURL.replace('https://embed.twitch.tv/', ''))
-      if (params.get('parent') != '') {
-        callback({})
-        return
-      }
-      // Set parent to localhost with port for development, or just localhost for production
-      const parentDomain = is.dev ? 'localhost:4000' : 'localhost'
-      params.set('parent', parentDomain)
-      params.set('referrer', `https://${parentDomain}/`)
+      // Parse the URL to get existing parameters
+      const url = new URL(redirectURL)
+      const params = url.searchParams
 
-      redirectURL = 'https://embed.twitch.tv/?' + params.toString()
-      console.log('Adjust Twitch embed URL to:', redirectURL)
+      // Only modify if parent is not already set
+      if (!params.has('parent')) {
+        // Set parent to localhost with port for development, or just localhost for production
+        const parentDomain = is.dev ? 'localhost:4000' : 'localhost'
+        params.set('parent', parentDomain)
+        params.set('referrer', `https://${parentDomain}/`)
+
+        redirectURL = url.toString()
+        console.log('Adjusted Twitch embed URL to:', redirectURL)
+      }
 
       callback({
         cancel: false,

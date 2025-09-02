@@ -545,7 +545,7 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onRemove, onEdit, 
                     }}
                   >
                     <iframe
-                      src={`https://player.twitch.tv/?channel=${channelName}&parent=${window.location.hostname === 'localhost' && window.location.port ? `${window.location.hostname}:${window.location.port}` : window.location.hostname}&muted=true`}
+                      src={`https://player.twitch.tv/?channel=${channelName}&muted=true`}
                       width="100%"
                       height="100%"
                       frameBorder="0"
