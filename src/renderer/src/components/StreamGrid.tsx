@@ -8,7 +8,6 @@ import 'react-resizable/css/styles.css'
 import { Box } from '@mui/material'
 import { Stream, GridItem } from '../types/stream'
 import { StreamCard } from './StreamCard'
-import { ChatCard } from './ChatCard'
 import { useStreamStore } from '../store/useStreamStore'
 
 // Move calculateMargins outside component to prevent recreation
@@ -37,23 +36,15 @@ const ASPECT_RATIO = 16 / 9 // Standard video aspect ratio
 interface StreamGridProps {
   streams: Stream[]
   layout: GridItem[]
-  chats: { id: string; streamId: string; streamType: string; streamName: string; streamIdentifier: string }[]
-  onRemoveStream: (id: string) => void
   onLayoutChange: (layout: GridItem[]) => void
-  onEditStream: (stream: Stream) => void
-  onAddChat: (streamIdentifier: string, streamId: string, streamName: string) => void
-  onRemoveChat: (id: string) => void
+  onVideosChange?: (videos: HTMLVideoElement[]) => void
 }
 
 export const StreamGrid = React.memo(({
   streams,
   layout,
-  chats,
-  onRemoveStream,
   onLayoutChange,
-  onEditStream,
-  onAddChat,
-  onRemoveChat
+  onVideosChange
 }: StreamGridProps): JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 1200, rowHeight: 100 })
@@ -118,24 +109,11 @@ export const StreamGrid = React.memo(({
       <div key={stream.id} style={{ zIndex: lastDraggedId === stream.id ? 1000 : 1 }}>
         <StreamCard
           stream={stream}
-          onRemove={onRemoveStream}
-          onEdit={onEditStream}
-          onAddChat={onAddChat}
-        />
-      </div>
-    )),
-    ...chats.map(chat => (
-      <div key={chat.id} style={{ zIndex: lastDraggedId === chat.id ? 1000 : 1 }}>
-        <ChatCard
-          id={chat.id}
-          streamType={chat.streamType}
-          streamName={chat.streamName}
-          streamIdentifier={chat.streamIdentifier}
-          onRemove={onRemoveChat}
+          onVideosChange={onVideosChange}
         />
       </div>
     ))
-  ]), [streams, chats, onRemoveStream, onEditStream, onAddChat, onRemoveChat, lastDraggedId])
+  ]), [streams, lastDraggedId, onVideosChange])
 
   return (
     <Box

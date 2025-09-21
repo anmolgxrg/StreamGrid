@@ -81,9 +81,9 @@ export const GridSelector: React.FC<GridSelectorProps> = ({ onNewGrid, onManageG
 
   const loadRecentGridsInfo = async (): Promise<void> => {
     try {
-      const allGrids = await window.api.getAllGrids()
+      const savedGrids = JSON.parse(localStorage.getItem('streamgrid-saved-grids') || '[]')
       const recent = recentGridIds
-        .map(id => allGrids.find(g => g.id === id))
+        .map(id => savedGrids.find((g: any) => g.id === id))
         .filter(Boolean)
         .slice(0, 4) as typeof recentGrids
       setRecentGrids(recent)
@@ -160,12 +160,12 @@ export const GridSelector: React.FC<GridSelectorProps> = ({ onNewGrid, onManageG
     handleCloseContextMenu()
 
     try {
-      const grid = await window.api.loadGrid(selectedGrid.id)
+      const savedGrids = JSON.parse(localStorage.getItem('streamgrid-saved-grids') || '[]')
+      const grid = savedGrids.find((g: any) => g.id === selectedGrid.id)
       if (grid) {
         const exportData = {
           streams: grid.streams,
-          layout: grid.layout,
-          chats: grid.chats
+          layout: grid.layout
         }
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
         const url = URL.createObjectURL(blob)

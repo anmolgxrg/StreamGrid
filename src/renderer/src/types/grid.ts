@@ -1,5 +1,4 @@
 import { Stream, GridItem } from './stream'
-import { ChatItem } from '../store/useStreamStore'
 
 export interface SavedGrid {
   id: string
@@ -9,7 +8,7 @@ export interface SavedGrid {
   thumbnail?: string // Base64 encoded screenshot
   streams: Stream[]
   layout: GridItem[]
-  chats: ChatItem[]
+  chats: any[] // Keep for compatibility but unused
 }
 
 export interface GridManifest {

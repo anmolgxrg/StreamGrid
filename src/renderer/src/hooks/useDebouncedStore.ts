@@ -1,6 +1,6 @@
 import { useCallback, useRef, useEffect, useState } from 'react'
 import { debounce } from 'lodash'
-import { useStreamStore, type ChatItem } from '../store/useStreamStore'
+import { useStreamStore } from '../store/useStreamStore'
 import { Stream, GridItem } from '../types/stream'
 import { SavedGrid } from '../types/grid'
 
@@ -21,7 +21,6 @@ export interface DebouncedStore {
   // Core state
   streams: Stream[]
   layout: GridItem[]
-  chats: ChatItem[]
   lastDraggedId: string | null
   currentGridId: string | null
   currentGridName: string
@@ -31,20 +30,15 @@ export interface DebouncedStore {
 
   // Core methods
   setLastDraggedId: (id: string | null) => void
-  addStream: (stream: Stream) => void
-  removeStream: (id: string) => void
   updateStream: (id: string, updates: Partial<Stream>) => void
   updateLayout: (newLayout: GridItem[]) => void
   importStreams: (data: unknown) => { success: boolean; error?: string }
   exportData: () => {
     streams: Stream[]
     layout: GridItem[]
-    chats: ChatItem[]
   }
   batchUpdate: (updates: Partial<{ streams: Stream[]; layout: GridItem[] }>) => void
-  addChat: (streamIdentifier: string, streamId: string, streamName: string) => string
-  removeChat: (id: string) => void
-  removeChatsForStream: (streamId: string) => void
+  loadExampleData: () => void
 
   // Grid management methods
   saveCurrentGrid: (name?: string) => Promise<SavedGrid>

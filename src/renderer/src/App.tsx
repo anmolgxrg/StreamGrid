@@ -14,49 +14,45 @@ import {
   TextField,
   DialogActions
 } from '@mui/material'
-import { Add, GitHub } from '@mui/icons-material'
+import { GitHub } from '@mui/icons-material'
 import StreamGridLogo from './assets/StreamGrid.svg'
-import { v4 as uuidv4 } from 'uuid'
 import { StreamGrid } from './components/StreamGrid'
-import { AddStreamDialog } from './components/AddStreamDialog'
 import { GridSelector } from './components/GridSelector'
 import { GridManagementDialog } from './components/GridManagementDialog'
+import { GlobalControlsWrapper } from './components/GlobalControlsWrapper'
 import { useDebouncedStore } from './hooks/useDebouncedStore'
-import { Stream, StreamFormData } from './types/stream'
-import { LoadingScreen } from './components/LoadingScreen'
-import { UpdateAlert } from './components/UpdateAlert'
+import { Stream } from './types/stream'
+// Removed LoadingScreen and UpdateAlert components
 
 export const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [aboutAnchorEl, setAboutAnchorEl] = useState<null | HTMLElement>(null)
   const [newGridDialogOpen, setNewGridDialogOpen] = useState(false)
   const [newGridName, setNewGridName] = useState('')
   const [gridManagementOpen, setGridManagementOpen] = useState(false)
+  const [globalVideos, setGlobalVideos] = useState<HTMLVideoElement[]>([])
   const {
     streams,
     layout,
-    chats,
-    addStream,
-    removeStream,
     updateLayout,
-    updateStream,
-    addChat,
-    removeChat,
-    removeChatsForStream,
     createNewGrid,
     saveNow,
-    hasUnsavedChanges
+    hasUnsavedChanges,
+    loadExampleData
   } = useDebouncedStore({
     layoutDebounceMs: 300,
     saveDebounceMs: 5000, // 5 seconds instead of 1 second
     streamUpdateDebounceMs: 500
   })
-  const [editingStream, setEditingStream] = useState<Stream | undefined>(undefined)
 
   useEffect(() => {
     // Set loading to false immediately as resources are already loaded
     setIsLoading(false)
+
+    // Load example data if no streams exist
+    if (streams.length === 0) {
+      loadExampleData()
+    }
 
     // Save on window close/refresh
     const handleBeforeUnload = async (e: BeforeUnloadEvent): Promise<void> => {
@@ -67,68 +63,28 @@ export const App: React.FC = () => {
       }
     }
 
-    // Listen for app quit event from main process
-    const handleAppQuit = async (): Promise<void> => {
-      if (hasUnsavedChanges) {
-        await saveNow()
-      }
-    }
-
     window.addEventListener('beforeunload', handleBeforeUnload)
-
-    // Add IPC listener for app quit
-    const removeQuitListener = window.api.onAppBeforeQuit(handleAppQuit)
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
-      removeQuitListener()
     }
-  }, [hasUnsavedChanges, saveNow])
+  }, [hasUnsavedChanges, saveNow, streams.length, loadExampleData])
 
   // Auto-save is now handled by the debounced store
   // No need for manual auto-save implementation here
 
-  if (isLoading) {
-    return <LoadingScreen />
+  // Removed loading screen - simplified startup
+
+  const handleVideoControl = (action: string, videoIndex?: number, value?: number) => {
+    console.log('Video control action:', action, videoIndex, value)
+    // Handle global video controls here
   }
 
-  const handleAddStream = async (data: StreamFormData): Promise<void> => {
-    const newStream: Stream = {
-      id: uuidv4(),
-      ...data,
-      isLivestream:
-        data.streamUrl.includes('twitch.tv') ||
-        data.streamUrl.includes('youtube.com/live') ||
-        data.streamUrl.includes('youtube.com/@') ||
-        data.streamUrl.includes('youtu.be/live')
-    }
-    addStream(newStream)
-    // Save immediately after adding a stream
-    await saveNow()
-  }
 
-  const handleRemoveStream = async (id: string): Promise<void> => {
-    removeChatsForStream(id)
-    removeStream(id)
-    // Save immediately after removing a stream
-    await saveNow()
-  }
-
-  const handleEditStream = (stream: Stream): void => {
-    setEditingStream(stream)
-    setIsAddDialogOpen(true)
-  }
-
-  const handleUpdateStream = async (id: string, data: StreamFormData): Promise<void> => {
-    updateStream(id, data)
-    // Save immediately after updating a stream
-    await saveNow()
-  }
 
 
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <UpdateAlert />
       <AppBar position="static" elevation={0}>
         <Toolbar sx={{ backgroundColor: 'background.paper' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
@@ -170,19 +126,6 @@ export const App: React.FC = () => {
 
           <Box sx={{ mx: 2 }} />
 
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => setIsAddDialogOpen(true)}
-            sx={{
-              textTransform: 'none',
-              px: 2,
-              borderRadius: 1
-            }}
-          >
-            Add Stream
-          </Button>
-
           <Menu
             anchorEl={aboutAnchorEl}
             open={Boolean(aboutAnchorEl)}
@@ -202,7 +145,7 @@ export const App: React.FC = () => {
                   About StreamGrid
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>
-                  Created by Bernard Moerdler - v{window.api.version}
+                  Created by Bernard Moerdler - v1.2.4
                 </Typography>
 
                 <Link
@@ -231,29 +174,14 @@ export const App: React.FC = () => {
         <StreamGrid
           streams={streams}
           layout={layout}
-          chats={chats}
-          onRemoveStream={handleRemoveStream}
           onLayoutChange={async (newLayout) => {
             updateLayout(newLayout)
             // Save immediately after layout change (stream movement)
             await saveNow()
           }}
-          onEditStream={handleEditStream}
-          onAddChat={addChat}
-          onRemoveChat={removeChat}
         />
       </Box>
 
-      <AddStreamDialog
-        open={isAddDialogOpen}
-        onClose={() => {
-          setIsAddDialogOpen(false)
-          setEditingStream(undefined)
-        }}
-        onAdd={handleAddStream}
-        onEdit={handleUpdateStream}
-        editStream={editingStream}
-      />
 
       <Dialog
         open={newGridDialogOpen}
@@ -309,6 +237,12 @@ export const App: React.FC = () => {
       <GridManagementDialog
         open={gridManagementOpen}
         onClose={() => setGridManagementOpen(false)}
+      />
+
+      {/* Global Controls Wrapper - positioned outside video windows */}
+      <GlobalControlsWrapper
+        videos={globalVideos}
+        onVideoControl={handleVideoControl}
       />
     </Box>
   )

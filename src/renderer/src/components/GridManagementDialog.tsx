@@ -61,11 +61,11 @@ export const GridManagementDialog: React.FC<GridManagementDialogProps> = ({ open
 
   const loadGrids = async (): Promise<void> => {
     try {
-      const allGrids = await window.api.getAllGrids()
-      // Map the API response to include createdAt field
-      const gridsWithCreatedAt = allGrids.map(grid => ({
+      const savedGrids = JSON.parse(localStorage.getItem('streamgrid-saved-grids') || '[]')
+      const gridsWithCreatedAt = savedGrids.map((grid: any) => ({
         ...grid,
-        createdAt: grid.lastModified // Use lastModified as createdAt if not available
+        createdAt: grid.createdAt || grid.lastModified,
+        streamCount: grid.streams?.length || 0
       }))
       setGrids(gridsWithCreatedAt)
     } catch (error) {
@@ -114,7 +114,8 @@ export const GridManagementDialog: React.FC<GridManagementDialogProps> = ({ open
 
   const handleExportGrid = async (grid: GridInfo): Promise<void> => {
     try {
-      const gridData = await window.api.loadGrid(grid.id)
+      const savedGrids = JSON.parse(localStorage.getItem('streamgrid-saved-grids') || '[]')
+      const gridData = savedGrids.find((g: any) => g.id === grid.id)
       if (!gridData) return
 
       const blob = new Blob([JSON.stringify(gridData, null, 2)], { type: 'application/json' })
@@ -133,7 +134,8 @@ export const GridManagementDialog: React.FC<GridManagementDialogProps> = ({ open
 
   const handleDuplicateGrid = async (grid: GridInfo): Promise<void> => {
     try {
-      const gridData = await window.api.loadGrid(grid.id)
+      const savedGrids = JSON.parse(localStorage.getItem('streamgrid-saved-grids') || '[]')
+      const gridData = savedGrids.find((g: any) => g.id === grid.id)
       if (!gridData) return
 
       const newName = `${grid.name} (Copy)`
@@ -193,8 +195,7 @@ export const GridManagementDialog: React.FC<GridManagementDialogProps> = ({ open
           // Import the data using the store's import method
           const result = useStreamStore.getState().importStreams({
             streams: data.streams,
-            layout: data.layout,
-            chats: data.chats || []
+            layout: data.layout
           })
 
           if (result.success) {
