@@ -2,6 +2,10 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { ThemeProvider, CssBaseline, createTheme } from '@mui/material'
 import { App } from './App'
+import './assets/transitive-video.css'
+
+// Import the TransitiveCapability component to register it
+import '@transitive-sdk/utils-web'
 
 const theme = createTheme({
   palette: {

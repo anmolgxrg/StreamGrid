@@ -38,6 +38,7 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.4.1",
     "@mui/material": "^6.4.1",
+    "@supabase/supabase-js": "^2.57.4",
     "@transitive-sdk/utils-web": "^0.14.4",
     "@types/lodash": "^4.17.20",
     "@types/uuid": "^10.0.0",

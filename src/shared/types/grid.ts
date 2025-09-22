@@ -3,6 +3,7 @@ export interface SavedGrid {
   name: string
   createdAt: string
   lastModified: string
+  updatedAt?: string // Additional timestamp for updates
   thumbnail?: string // Base64 encoded screenshot
   streams: any[]
   layout: any[]

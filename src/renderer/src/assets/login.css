@@ -1,0 +1,62 @@
+/* Login Page Styles */
+.login-page {
+  font-family: 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+}
+
+.login-left-section {
+  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+}
+
+.login-brand-text {
+  background: linear-gradient(135deg, #8A63ED 0%, #A67CFF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 800;
+  letter-spacing: 3px;
+}
+
+.login-tagline {
+  background: linear-gradient(135deg, #FFFFFF 0%, #F0F0F0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.login-input {
+  transition: all 0.3s ease;
+}
+
+.login-input:focus {
+  box-shadow: 0 0 0 3px rgba(138, 99, 237, 0.1);
+  border-color: #8A63ED !important;
+}
+
+.login-button {
+  background: linear-gradient(135deg, #8A63ED 0%, #A67CFF 100%);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(138, 99, 237, 0.3);
+}
+
+.login-button:hover {
+  background: linear-gradient(135deg, #7B52E6 0%, #9B6CFF 100%);
+  box-shadow: 0 6px 16px rgba(138, 99, 237, 0.4);
+  transform: translateY(-1px);
+}
+
+.login-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(138, 99, 237, 0.3);
+}
+
+.login-decorative-line {
+  background: repeating-linear-gradient(
+    90deg,
+    #8A63ED 0px,
+    #8A63ED 8px,
+    transparent 8px,
+    transparent 16px
+  );
+  height: 2px;
+}

@@ -1,39 +1,67 @@
-import React, { memo, useState } from 'react'
+import React, { memo, useRef, useEffect, useState } from 'react'
 import {
   Card,
   Typography,
   Box
 } from '@mui/material'
 import { Stream } from '../types/stream'
-import { TransitiveVideo } from './TransitiveVideo'
-import VideoWindowManager from './VideoWindowManager'
 
 interface StreamCardProps {
   stream: Stream
-  onVideosChange?: (videos: HTMLVideoElement[]) => void
+  videoElement?: HTMLVideoElement
 }
 
-const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onVideosChange }) => {
-  const [videos, setVideos] = useState<HTMLVideoElement[]>([])
-  const [showVideoManager, setShowVideoManager] = useState(false)
+const StreamCard: React.FC<StreamCardProps> = memo(({ stream, videoElement }) => {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false)
 
-  const handleVideosReady = (videoElements: HTMLVideoElement[]) => {
-    setVideos(videoElements)
-    setShowVideoManager(true)
-    // Pass videos to parent component
-    if (onVideosChange) {
-      onVideosChange(videoElements)
+  useEffect(() => {
+    if (videoElement && videoRef.current) {
+      console.log(`StreamCard ${stream.name}: Setting up video`, {
+        src: videoElement.src,
+        srcObject: videoElement.srcObject,
+        videoWidth: videoElement.videoWidth,
+        videoHeight: videoElement.videoHeight
+      })
+      
+      // Get the video source (srcObject or src)
+      const videoSrc = videoElement.srcObject || videoElement.src
+      
+      if (videoSrc) {
+        // Set the video source to our video element
+        if (videoRef.current.srcObject !== videoSrc) {
+          videoRef.current.srcObject = videoSrc as MediaStream
+          console.log(`StreamCard ${stream.name}: Set srcObject`)
+        }
+        
+        // Set up event listeners
+        const handleLoadedData = () => {
+          console.log(`StreamCard ${stream.name}: Video loaded`)
+          setIsVideoLoaded(true)
+        }
+        
+        const handleError = (e: any) => {
+          console.error(`StreamCard ${stream.name}: Video error`, e)
+          setIsVideoLoaded(false)
+        }
+        
+        videoRef.current.addEventListener('loadeddata', handleLoadedData)
+        videoRef.current.addEventListener('error', handleError)
+        
+        // Try to play the video
+        videoRef.current.play().catch((error) => {
+          console.error(`StreamCard ${stream.name}: Play error`, error)
+        })
+        
+        return () => {
+          videoRef.current?.removeEventListener('loadeddata', handleLoadedData)
+          videoRef.current?.removeEventListener('error', handleError)
+        }
+      } else {
+        console.warn(`StreamCard ${stream.name}: No video source available`)
+      }
     }
-  }
-
-  const handleCloseVideoManager = () => {
-    setShowVideoManager(false)
-    setVideos([])
-    // Clear videos from parent component
-    if (onVideosChange) {
-      onVideosChange([])
-    }
-  }
+  }, [videoElement, stream.name])
 
   return (
     <Card
@@ -57,7 +85,8 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onVideosChange }) 
           bgcolor: 'rgba(0,0,0,0.8)',
           display: 'flex',
           alignItems: 'center',
-          px: 1
+          px: 1,
+          zIndex: 2
         }}
       >
         <Typography
@@ -83,39 +112,34 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onVideosChange }) 
         sx={{
           flex: 1,
           position: 'relative',
-          backgroundColor: '#000',
+          backgroundColor: '#1a1a1a',
           overflow: 'hidden'
         }}
       >
-        {stream.isTransitiveVideo || stream.name.toLowerCase().includes('transitive') || stream.name.toLowerCase().includes('robot') ? (
-          showVideoManager && videos.length > 0 ? (
-            <VideoWindowManager
-              videos={videos}
-              sources={stream.videoSources || ['/cam1', '/cam2', '/cam3', '/cam4', '/cam5', '/cam6']}
-              onClose={handleCloseVideoManager}
-              style={{ width: '100%', height: '100%' }}
-            />
-          ) : (
-            <TransitiveVideo
-              jwt={stream.jwt || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImZseXdoZWVsIiwiZGV2aWNlIjoiZF84ZGQzMTQzN2E2IiwiY2FwYWJpbGl0eSI6IkB0cmFuc2l0aXZlLXJvYm90aWNzL3JlbW90ZS10ZWxlb3AiLCJ2YWxpZGl0eSI6ODY0MDAsImlhdCI6MTc1ODQyNTgxM30.SAuMm6YGIe6yx-nvA2M_ETZpPQe5LpPDyTghzXS3gHM"}
-              count={stream.videoCount || 6}
-              sources={stream.videoSources || ['/cam1', '/cam2', '/cam3', '/cam4', '/cam5', '/cam6']}
-              onVideosReady={handleVideosReady}
-              style={{ width: '100%', height: '100%' }}
-            />
-          )
+        {videoElement ? (
+          <Box
+            component="video"
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            sx={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
+          />
         ) : (
           <Box
             sx={{
-              flex: 1,
+              width: '100%',
+              height: '100%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: '#1a1a1a',
               color: 'white',
               flexDirection: 'column',
-              gap: 2,
-              height: '100%'
+              gap: 2
             }}
           >
             <Box
@@ -137,7 +161,7 @@ const StreamCard: React.FC<StreamCardProps> = memo(({ stream, onVideosChange }) 
               {stream.name}
             </Typography>
             <Typography variant="caption" align="center" sx={{ px: 2, opacity: 0.7 }}>
-              Layout Demo - Drag & Resize
+              Connecting to camera feed...
             </Typography>
           </Box>
         )}

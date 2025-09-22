@@ -12,15 +12,16 @@ import {
   DialogTitle,
   DialogContent,
   TextField,
-  DialogActions
+  DialogActions,
+  IconButton
 } from '@mui/material'
 import { GitHub } from '@mui/icons-material'
-import StreamGridLogo from './assets/StreamGrid.svg'
 import { StreamGrid } from './components/StreamGrid'
 import { GridSelector } from './components/GridSelector'
 import { GridManagementDialog } from './components/GridManagementDialog'
-import { GlobalControlsWrapper } from './components/GlobalControlsWrapper'
+import { LoginPage } from './components/LoginPage'
 import { useDebouncedStore } from './hooks/useDebouncedStore'
+import { useAuth } from './hooks/useAuth'
 import { Stream } from './types/stream'
 // Removed LoadingScreen and UpdateAlert components
 
@@ -30,7 +31,11 @@ export const App: React.FC = () => {
   const [newGridDialogOpen, setNewGridDialogOpen] = useState(false)
   const [newGridName, setNewGridName] = useState('')
   const [gridManagementOpen, setGridManagementOpen] = useState(false)
-  const [globalVideos, setGlobalVideos] = useState<HTMLVideoElement[]>([])
+  const [showTransitiveVideo, setShowTransitiveVideo] = useState(false)
+  
+  // Authentication
+  const { user, loading: authLoading, signOut } = useAuth()
+  
   const {
     streams,
     layout,
@@ -49,10 +54,13 @@ export const App: React.FC = () => {
     // Set loading to false immediately as resources are already loaded
     setIsLoading(false)
 
-    // Load example data if no streams exist
-    if (streams.length === 0) {
+    // Only load data if user is authenticated
+    if (user && streams.length === 0) {
       loadExampleData()
     }
+
+    // Automatically start loading TransitiveCapability videos
+    setShowTransitiveVideo(true)
 
     // Save on window close/refresh
     const handleBeforeUnload = async (e: BeforeUnloadEvent): Promise<void> => {
@@ -68,55 +76,38 @@ export const App: React.FC = () => {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }
-  }, [hasUnsavedChanges, saveNow, streams.length, loadExampleData])
+  }, [hasUnsavedChanges, saveNow, streams.length, loadExampleData, user])
 
   // Auto-save is now handled by the debounced store
   // No need for manual auto-save implementation here
 
   // Removed loading screen - simplified startup
 
-  const handleVideoControl = (action: string, videoIndex?: number, value?: number) => {
-    console.log('Video control action:', action, videoIndex, value)
-    // Handle global video controls here
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <Box sx={{ 
+        height: '100vh', 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        backgroundColor: '#F8F8F8'
+      }}>
+        <Typography variant="h6">Loading...</Typography>
+      </Box>
+    )
   }
 
-
-
+  // Show login page if user is not authenticated
+  if (!user) {
+    return <LoginPage onLoginSuccess={() => {}} />
+  }
 
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <AppBar position="static" elevation={0}>
         <Toolbar sx={{ backgroundColor: 'background.paper' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
-            <Box
-              onClick={(e) => setAboutAnchorEl(e.currentTarget)}
-              sx={{
-                width: '32px',
-                height: '32px',
-                display: 'flex',
-                userSelect: 'none',
-                alignItems: 'center',
-                cursor: 'pointer',
-                '& img': {
-                  width: '100%',
-                  height: '100%'
-                }
-              }}
-            >
-              <img src={StreamGridLogo} alt="StreamGrid Logo" />
-            </Box>
-            <Typography
-              variant="h6"
-              component="div"
-              onClick={(e) => setAboutAnchorEl(e.currentTarget)}
-              sx={{
-                color: 'text.primary',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              StreamGrid
-            </Typography>
           </Box>
 
           <GridSelector
@@ -124,7 +115,18 @@ export const App: React.FC = () => {
             onManageGrids={() => setGridManagementOpen(true)}
           />
 
-          <Box sx={{ mx: 2 }} />
+          <Button
+            onClick={async () => {
+              await signOut()
+            }}
+            sx={{ 
+              color: 'text.primary',
+              textTransform: 'none',
+              marginLeft: 2
+            }}
+          >
+            Sign Out
+          </Button>
 
           <Menu
             anchorEl={aboutAnchorEl}
@@ -174,6 +176,8 @@ export const App: React.FC = () => {
         <StreamGrid
           streams={streams}
           layout={layout}
+          showTransitiveVideo={showTransitiveVideo}
+          onTransitiveVideoClose={() => setShowTransitiveVideo(false)}
           onLayoutChange={async (newLayout) => {
             updateLayout(newLayout)
             // Save immediately after layout change (stream movement)
@@ -237,12 +241,6 @@ export const App: React.FC = () => {
       <GridManagementDialog
         open={gridManagementOpen}
         onClose={() => setGridManagementOpen(false)}
-      />
-
-      {/* Global Controls Wrapper - positioned outside video windows */}
-      <GlobalControlsWrapper
-        videos={globalVideos}
-        onVideoControl={handleVideoControl}
       />
     </Box>
   )

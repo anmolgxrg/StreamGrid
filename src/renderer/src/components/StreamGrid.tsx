@@ -8,6 +8,7 @@ import 'react-resizable/css/styles.css'
 import { Box } from '@mui/material'
 import { Stream, GridItem } from '../types/stream'
 import { StreamCard } from './StreamCard'
+import { TransitiveVideo } from './TransitiveVideo'
 import { useStreamStore } from '../store/useStreamStore'
 
 // Move calculateMargins outside component to prevent recreation
@@ -36,19 +37,22 @@ const ASPECT_RATIO = 16 / 9 // Standard video aspect ratio
 interface StreamGridProps {
   streams: Stream[]
   layout: GridItem[]
+  showTransitiveVideo?: boolean
+  onTransitiveVideoClose?: () => void
   onLayoutChange: (layout: GridItem[]) => void
-  onVideosChange?: (videos: HTMLVideoElement[]) => void
 }
 
 export const StreamGrid = React.memo(({
   streams,
   layout,
-  onLayoutChange,
-  onVideosChange
+  showTransitiveVideo = false,
+  onTransitiveVideoClose,
+  onLayoutChange
 }: StreamGridProps): JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 1200, rowHeight: 100 })
   const resizeTimeoutRef = useRef<number>()
+  const [videoElements, setVideoElements] = useState<HTMLVideoElement[]>([])
 
   const updateDimensions = useCallback((): void => {
     if (containerRef.current) {
@@ -104,16 +108,35 @@ export const StreamGrid = React.memo(({
 
   const lastDraggedId = useStreamStore(state => state.lastDraggedId)
 
+  const handleVideosReady = useCallback((videos: HTMLVideoElement[]) => {
+    console.log('StreamGrid: Received videos:', videos.length)
+    videos.forEach((video, index) => {
+      console.log(`Video ${index}:`, {
+        src: video.src,
+        srcObject: video.srcObject,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight
+      })
+    })
+    setVideoElements(videos)
+    // Don't close the TransitiveVideo component - keep it running in background
+    // onTransitiveVideoClose?.()
+  }, [onTransitiveVideoClose])
+
+
   const memoizedContent = useMemo(() => ([
-    ...streams.map(stream => (
-      <div key={stream.id} style={{ zIndex: lastDraggedId === stream.id ? 1000 : 1 }}>
+    ...streams.map((stream, index) => (
+      <div 
+        key={stream.id} 
+        className={lastDraggedId === stream.id ? 'dragging-item' : 'grid-item'}
+      >
         <StreamCard
           stream={stream}
-          onVideosChange={onVideosChange}
+          videoElement={videoElements[index]}
         />
       </div>
     ))
-  ]), [streams, lastDraggedId, onVideosChange])
+  ]), [streams, lastDraggedId, videoElements])
 
   return (
     <Box
@@ -156,6 +179,15 @@ export const StreamGrid = React.memo(({
         }
       }}
     >
+      {/* Hidden TransitiveVideo component that loads videos in background */}
+      {showTransitiveVideo && (
+        <TransitiveVideo 
+          onVideosReady={handleVideosReady} 
+          onClose={onTransitiveVideoClose}
+        />
+      )}
+
+      
       <GridLayout
         className="layout"
         layout={layout}
@@ -164,7 +196,7 @@ export const StreamGrid = React.memo(({
         rowHeight={dimensions.rowHeight}
         margin={[calculateMargins().horizontal, calculateMargins().vertical]} // Use smaller margins between cards
         useCSSTransforms={true}
-        onLayoutChange={(layout): void => handleLayoutChange(layout as GridItem[])}
+        onLayoutChange={(layout: any): void => handleLayoutChange(layout as GridItem[])}
         isDraggable
         draggableHandle=".drag-handle"
         isResizable
